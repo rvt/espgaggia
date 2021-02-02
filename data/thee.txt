@@ -1,0 +1,16 @@
+pump=0;valve=0;
+brewTemp=95;
+label=ask;
+Display=Release steam button;SteamButton0;
+Display=Did you open steam valve using knob and plased a cup?;question=yes,no;
+label=no;
+Display=Please place a cup and open steam valve first;wait=2500;
+jump=ask;
+label=yes;
+Display=Wait for temperature;brewTemp=95;
+Display=Warning, hot water!;
+beep=3;wait=1500;
+pump=1;
+Display=Press brew to stop;
+wait=60000;
+Display=Time is up;

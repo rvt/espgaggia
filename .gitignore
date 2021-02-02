@@ -1,0 +1,13 @@
+.pio/
+.vscode/
+tmp/
+src/*generated*
+build/
+.idea/
+.history/
+controllerCfg.conf
+lvgl_examples/
+libtest/
+idea.md
+*.sh
+tmp/

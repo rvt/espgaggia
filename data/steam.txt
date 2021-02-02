@@ -1,0 +1,13 @@
+pump=0;valve=0;
+BrewButton=1,brewIsOff;
+Display=Turn off brew;
+BrewButton=0;
+label=brewIsOff;
+SteamButton=0,steamIsOn;
+Display=Press steam to continue;
+label=steamIsOn;
+Display=Waiting for pressure;
+steamTemp=145;
+Display=Steam is ready;
+SteamButton=0;
+brewTemp=90;

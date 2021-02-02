@@ -1,0 +1,11 @@
+pump=0;valve=0;
+Display=Turn off Steam;SteamButton0;
+Display=Is porta filter removed?;question=yes,no;
+label=no;
+Display=Stopping;wait=2500;
+jump=end;
+label=yes;
+Display=Press brew button;BrewButton=1;
+Display=Purging;valve=1;wait=100;pump=1;wait=5000;pump=0;wait=100;valve=0;
+Display=Done;
+label=end;

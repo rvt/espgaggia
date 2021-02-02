@@ -1,0 +1,53 @@
+# Continuous Integration (CI) is the practice, in software
+# engineering, of merging all developer working copies with a shared mainline
+# several times a day < http://docs.platformio.org/en/stable/ci/index.html >
+#
+# Documentation:
+#
+# * Travis CI Embedded Builds with PlatformIO
+#   < https://docs.travis-ci.com/user/integration/platformio/ >
+#
+# * PlatformIO integration with Travis CI
+#   < http://docs.platformio.org/en/stable/ci/travis.html >
+#
+# * User Guide for `platformio ci` command
+#   < http://docs.platformio.org/en/stable/userguide/cmd_ci.html >
+
+
+language: python
+python:
+    - "3.7"
+
+sudo: false
+cache:
+    directories:
+        - "~/.platformio"
+
+install:
+    - pip install -U platformio
+    - platformio update
+    - |
+      if [[ ${TRAVIS_OS_NAME} == "linux" ]]; then
+        DEPS_DIR="${TRAVIS_BUILD_DIR}/deps"
+        mkdir -p ${DEPS_DIR} && cd ${DEPS_DIR}
+        CMAKE_URL="http://www.cmake.org/files/v3.5/cmake-3.5.2-Linux-x86_64.tar.gz"
+        mkdir cmake && travis_retry wget --no-check-certificate --quiet -O - ${CMAKE_URL} | tar --strip-components=1 -xz -C cmake
+        export PATH=${DEPS_DIR}/cmake/bin:${PATH}
+        cd ..
+      else
+          if ! brew ls --version cmake &>/dev/null; then brew install cmake; fi
+      fi
+
+    - |
+      if [ "${TRAVIS_OS_NAME}" == "linux" ] ; then
+        sudo apt-get -y install yasm;
+      fi  
+      if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
+        brew update;
+        brew install yasm;
+      fi
+      
+script:
+    - echo "Run desktop (native) tests on Travis.CI Linux machine"
+    - platformio upgrade
+    - platformio run

@@ -1,0 +1,16 @@
+TitleOff=1;
+PumpMillis=0;
+pump=0;
+valve=0;
+brewTemp=90;
+BrewOrSteamButton=1,isOn,isOn,isOff;
+label=isOn;
+Display=Turn off brew and steam;
+BrewAndSteamButton=0;
+label=isOff;
+DisplayOff=1;
+BrewOrSteamButton=1,brew,steam;
+label=brew;
+load=/brew.txt;
+label=steam;
+load=/steam.txt;
