@@ -16,7 +16,6 @@
 LV_IMG_DECLARE(coffee)
 //LV_IMG_DECLARE(airplane)
 
-static lv_style_t style_btn;
 static lv_style_t style_lbl_large;
 static lv_style_t style_default;
 static lv_style_t style_tab;
@@ -163,6 +162,8 @@ static lv_obj_t* gaggia_timer(lv_obj_t* parent) {
 
 #if defined (BUILD_NATIVE)
     lv_label_set_text(ui_elements[TIMER_LABEL].element, "12.6");
+#else
+    gaggia_ui_set_visibility(TIMER_BOX, false);
 #endif
 
     return ui_elements[TIMER_BOX].element ;
@@ -214,8 +215,9 @@ static lv_obj_t* spin_create(lv_obj_t* parent,
     *plusButton = plusBtn;
     return box;
 }
-
-const char* map[] = {"Cappuccino", "A. Coffee", ""};
+#if defined (BUILD_NATIVE)
+    const char* map[] = {"Cappuccino", "A. Coffee", ""};
+#endif
 
 lv_obj_t* gaggia_brew_options(lv_obj_t* parent) {
     // Matrix to select it
@@ -431,6 +433,7 @@ void gaggia_ui_set_text_hint(enum ui_element_types label, const char* value, siz
     if (value == NULL) {
         lv_label_set_text_static(ui_elements[label].element, NULL);
         lv_obj_realign(ui_elements[label].element);
+        //printf(text_elements[label].text);
         return;
     }
 

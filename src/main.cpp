@@ -26,7 +26,7 @@ extern "C" {
 #include <optparser.hpp>
 #include <utils.h>
 #include <onoffheatelement.hpp>
-#include <settings.h>
+#include <oneshot.hpp>
 #include <ui/gaggia_ui.h>
 
 #include <SPI.h> // Include for harware SPI
@@ -109,9 +109,10 @@ static char const* LAST_MENU_ENTRY = "";
 
 bool saveConfig(const char* filename, Properties& properties);
 
-Settings saveConfigHandler{
-    500,
-    10000,
+OneShot saveConfigHandler{
+    5000,
+    []() {
+    },
     []() {
         saveConfig(CONFIG_FILENAME, gaggiaConfig);
         configModified = false;
@@ -121,14 +122,21 @@ Settings saveConfigHandler{
     }
 };
 
-Settings removeCounterLabel{
+OneShot removeCounterLabel{
     5000,
-    5000,
+    []() {
+        gaggia_ui_set_visibility(TIMER_BOX, true);
+
+    },
     []() {
         gaggia_ui_set_visibility(TIMER_BOX, false);
     },
     []() {
-        return !gaggiaIO.pump();
+        bool pump = gaggiaIO.pump();
+        if (pump) {
+            removeCounterLabel.hold();
+        }
+        return pump;
     }
 };
 
@@ -228,12 +236,15 @@ void handleScriptContext() {
             controller->brewMode(gaggia_scripting_context()->m_brewMode);
             controller->setPoint(gaggia_scripting_context()->m_temperature);
 
+            
             if (gaggiaIO.pump()) {
-                gaggia_ui_set_visibility(TIMER_BOX, true);
-                dtostrf(gaggiaIO.pumpMillis() / 1000.f, 1, 1, gaggia_ui_set_text_buffer(TIMER_LABEL));
-                gaggia_ui_set_text_hint(TIMER_LABEL, NULL, 6);
+                float pumpMillis = gaggiaIO.pumpMillis() / 1000.f;
+                if (pumpMillis<999.0f) {
+                    dtostrf(pumpMillis, 1, 1, gaggia_ui_set_text_buffer(TIMER_LABEL));
+                    gaggia_ui_set_text_hint(TIMER_LABEL, NULL, 6);
+                }
             }
-    }
+}
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -282,21 +293,6 @@ void publishStatusToMqtt() {
         lastMeasurementCRC = thisCrc;
     }
 }
-
-Settings publishUpdates {
-    1000 / 50,
-    1000 / 50,
-    []() {
-        char buffer[10];
-        dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, buffer);
-        gaggia_ui_set_text(BREW_TEMP_LABEL, buffer);
-        dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, buffer);
-        gaggia_ui_set_text(STEAM_TEMP_LABEL, buffer);
-    },
-    []() {
-        return true;
-    }
-};
 
 /**
  * Handle incomming MQTT requests
@@ -444,6 +440,8 @@ void setup_ui_events() {
 
     //
     gaggia_ui_set_text_hint(TIMER_LABEL, "0.0", 6);
+    gaggia_ui_set_text_hint(BREW_TEMP_LABEL, "0.0", 8);
+    gaggia_ui_set_text_hint(STEAM_TEMP_LABEL, "0.0", 8);
 
     // A bit ugly, but it works... I guess...
     // Makes a map of PTR to each menu entry
@@ -566,7 +564,6 @@ void loop() {
         counter50TimesSec++;
 
         handleScriptContext();
-        publishUpdates.handle();
         controller -> handle(currentMillis);
 
         // once a second publish status to mqtt (if there are changes)
@@ -592,7 +589,13 @@ void loop() {
                 saveConfig(CONTROLLER_CONFIG_FILENAME, controllerConfig);
             }
         } else if (counter50TimesSec % maxSlots == slot50++) {
-            saveConfigHandler.handle();
+         //   saveConfigHandler.handle();
+        } else if (counter50TimesSec % maxSlots == slot50++) {
+            // Temporary untill we have a better spot
+            dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(BREW_TEMP_LABEL));
+            dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(STEAM_TEMP_LABEL));
+            gaggia_ui_set_text(BREW_TEMP_LABEL, NULL);
+            gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
         } else if (counter50TimesSec % maxSlots == slot50++) {
             removeCounterLabel.handle();
         } else if (counter50TimesSec % maxSlots == slot50++) {
