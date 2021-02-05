@@ -21,7 +21,7 @@ extern Properties gaggiaConfig;
 
 static GaggiaIO* scripting_gaggiaIO;
 static GaggiaScriptContext* scriptContext{nullptr};
-static ScriptRunner<GaggiaScriptContext>* scriptRunner = nullptr;
+static CachedScriptRunner<GaggiaScriptContext>* scriptRunner = nullptr;
 static char scriptContextFileToLoad[32]; // See note for handleScriptContext()
 constexpr uint8_t SCRIPT_LABEL_SIZE_MAX = 16;
 constexpr uint8_t SCRIPT_LINE_SIZE_MAX = 64;
@@ -30,9 +30,9 @@ using namespace rvt::scriptrunner;
 
 bool OptionalJump(GaggiaScriptContext& context, const char* value, const uint8_t jmpPos) {
     char* jmpLocation = nullptr;
-    OptParser::get<SCRIPT_LINE_SIZE_MAX>(value, ',', [&](const OptValue & value) {
-        if (value.pos() == jmpPos) {
-            jmpLocation = (char*)value;
+    OptParser::get<SCRIPT_LINE_SIZE_MAX>(value, ',', [&](const OptValue& parsed) {
+        if (parsed.pos() == jmpPos) {
+            jmpLocation = (char*)parsed;
         }
     });
 
@@ -44,7 +44,7 @@ bool OptionalJump(GaggiaScriptContext& context, const char* value, const uint8_t
     return false;
 }
 
-bool getBoolValue(const OptValue& value, uint8_t pos) {
+bool getBoolValue(const char* value, uint8_t pos) {
     bool rValue = false;
     OptParser::get<SCRIPT_LINE_SIZE_MAX>(value, ',', [&](const OptValue & parsed) {
         if (parsed.pos() == pos) {
@@ -57,20 +57,20 @@ bool getBoolValue(const OptValue& value, uint8_t pos) {
 void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
     scripting_gaggiaIO = gaggiaIO;
     std::vector<Command<GaggiaScriptContext>*> commands;
-    commands.push_back(new Command<GaggiaScriptContext> {"valve", [](const OptValue & value, GaggiaScriptContext & context) {
-        context.m_valve = (bool)value;
+    commands.push_back(new Command<GaggiaScriptContext> {"valve", [](const char * value, GaggiaScriptContext & context) {
+        context.m_valve = atoi(value);
         return true;
     }
                                                         });
-    commands.push_back(new Command<GaggiaScriptContext> {"pump", [](const OptValue & value, GaggiaScriptContext & context) {
-        context.m_pump = (bool)value;
+    commands.push_back(new Command<GaggiaScriptContext> {"pump", [](const char * value, GaggiaScriptContext & context) {
+        context.m_pump = atoi(value);
         return true;
     }
                                                         });
 
-    commands.push_back(new Command<GaggiaScriptContext> {"brewTemp", [](const OptValue & value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"brewTemp", [](const char * value, GaggiaScriptContext & context) {
         context.m_brewMode = true;
-        auto tempValue = (float)value;
+        auto tempValue = atof(value);
 
         if (tempValue < 0) {
             context.m_temperature = (float)gaggiaConfig.get("defaultBrewTemp");
@@ -85,9 +85,9 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
 #endif
     }
                                                         });
-    commands.push_back(new Command<GaggiaScriptContext> {"steamTemp", [](const OptValue & value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"steamTemp", [](const char * value, GaggiaScriptContext & context) {
         context.m_brewMode = false;
-        auto tempValue = (float)value;
+        auto tempValue = atof(value);
 
         if (tempValue < 0) {
             context.m_temperature = (float)gaggiaConfig.get("defaultSteamTemp");
@@ -102,41 +102,42 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
 #endif
     }
                                                         });
-    commands.push_back(new Command<GaggiaScriptContext> {"Display", [](const OptValue & value, GaggiaScriptContext & context) {
-        Serial.println((char*)value);
+    commands.push_back(new Command<GaggiaScriptContext> {"Display", [](const char * value, GaggiaScriptContext & context) {
+        Serial.println(value);
         gaggia_ui_set_visibility(PROCESS_MESSAGE_CONTAINER, true);
-        gaggia_ui_set_text(PROCESS_MESSAGE_LABEL, (char*) value);
+        gaggia_ui_set_text(PROCESS_MESSAGE_LABEL, value);
         return true;
     }
                                                         });
 
-    commands.push_back(new Command<GaggiaScriptContext> {"PumpMillis", [](const OptValue & value, GaggiaScriptContext & context) {
-        gaggia_ui_set_visibility(TIMER_BOX, (bool)value);
+    commands.push_back(new Command<GaggiaScriptContext> {"PumpMillis", [](const char * value, GaggiaScriptContext & context) {
+        // gaggia_ui_set_visibility(TIMER_BOX, atoi(value));
+        Serial.println("PumpMillis is deprecated");
         return true;
     }
                                                         });
-    commands.push_back(new Command<GaggiaScriptContext> {"Title", [](const OptValue & value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"Title", [](const char * value, GaggiaScriptContext & context) {
         Serial.println((char*)value);
         gaggia_ui_set_visibility(PROCESS_MESSAGE_CONTAINER, true);
-        gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, (char*) value);
+        gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, value);
         return true;
     }
                                                         });
-    commands.push_back(new Command<GaggiaScriptContext> {"TitleOff", [](const OptValue & value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"TitleOff", [](const char * value, GaggiaScriptContext & context) {
         gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, "");
         return true;
     }
                                                         });
 
-    commands.push_back(new Command<GaggiaScriptContext> {"DisplayOff", [](const OptValue & value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"DisplayOff", [](const char * value, GaggiaScriptContext & context) {
         Serial.println("Display Off");
         gaggia_ui_set_text(PROCESS_MESSAGE_LABEL, "");
         gaggia_ui_set_visibility(PROCESS_MESSAGE_CONTAINER, false);
         return true;
     }
                                                         });
-    commands.push_back(new Command<GaggiaScriptContext> {"question", [](const OptValue & value, GaggiaScriptContext & context) {
-        if (context.isAdvanced()) {
+    commands.push_back(new Command<GaggiaScriptContext> {"question", [](const char * value, GaggiaScriptContext & context) {
+        if (context.advanced()) {
             // Serial.print(F("Question:"));
             // Serial.println((char*)value);
         }
@@ -144,14 +145,14 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
         return true;
     }
                                                         });
-    commands.push_back(new Command<GaggiaScriptContext> {"load", [&](const OptValue & value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"load", [&](const char * value, GaggiaScriptContext & context) {
         strncpy(scriptContextFileToLoad, (char*)value, sizeof(scriptContextFileToLoad));
         return true;
     }
                                                         });
 
-    commands.push_back(new Command<GaggiaScriptContext> {"SteamButton", [](const OptValue & value, GaggiaScriptContext & context) {
-        if (scripting_gaggiaIO->steamButton()->current() == (bool)value) {
+    commands.push_back(new Command<GaggiaScriptContext> {"SteamButton", [](const char * value, GaggiaScriptContext & context) {
+        if (scripting_gaggiaIO->steamButton()->current() == getBoolValue(value, 0)) {
             return true;
         } else {
             return OptionalJump(context, value, 1);
@@ -161,7 +162,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
 
     // Wait for Brew Button
     // if not matched optionally jump to location
-    commands.push_back(new Command<GaggiaScriptContext> {"BrewButton", [](const OptValue & value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"BrewButton", [](const char * value, GaggiaScriptContext & context) {
         if (scripting_gaggiaIO->brewButton()->current() == getBoolValue(value, 0)) {
             return true;
         } else {
@@ -172,7 +173,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
 
     // Wait for the brew or steam button is pressed and continue
     // optionally jump to the location of the second parameter of not matched
-    commands.push_back(new Command<GaggiaScriptContext> {"BrewOrSteamButton", [](const OptValue & value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"BrewOrSteamButton", [](const char * value, GaggiaScriptContext & context) {
         bool buttonValue = getBoolValue(value, 0);
 
         if (scripting_gaggiaIO->brewButton()->current() == buttonValue) {
@@ -186,7 +187,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
                                                         });
 
     // Wait for both the BrewAndSteamButton are in a specific value
-    commands.push_back(new Command<GaggiaScriptContext> {"BrewAndSteamButton", [](const OptValue & value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"BrewAndSteamButton", [](const char * value, GaggiaScriptContext & context) {
 
         bool buttonValue = getBoolValue(value, 0);
 
@@ -198,7 +199,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
         return false;
     }
                                                         });
-    scriptRunner = new ScriptRunner<GaggiaScriptContext> {commands};
+    scriptRunner = new CachedScriptRunner<GaggiaScriptContext> {commands};
 }
 
 void gaggia_load_script() {
