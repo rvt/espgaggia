@@ -1,7 +1,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 # Design Goal
-A make a gaggia coffee machine more smart.
+A make a gaggia coffee machine more smart and make it such that is would be easy to duplicate with least amouth of soldering.
 
 Features
 * Control temperature of both stream and brew and set temperature with a touch display (Fuzzy Logic)
@@ -91,4 +91,16 @@ note: For the MAX31855K make sure you get the 'fancy' one, that is proper dialec
 
 # Connection diagram
 
-Will be created soon, for now look for pins in `platformio.ini`
+For pins in `platformio.ini`
+
+_WARNING schematic needs further verification_
+
+![images](images/schematic.jpg "Screen 1")
+
+# Hardware Tested
+
+- [x] TFT/Touch display (ILI9341)
+- [x] Temperature sensors
+- [ ] Buttons
+- [ ] SSR
+- [x] Temperature control (on other project verified)

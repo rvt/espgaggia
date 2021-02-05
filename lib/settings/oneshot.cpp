@@ -12,27 +12,30 @@ OneShot::OneShot(
     CallbackFunction p_startCallback,
     CallbackFunction p_endCallback,
     ModifiedFunction p_modified) :
-        m_delayTimeMS{p_delayTimeMS},
-        m_startCallback{p_startCallback},
-        m_endCallback{p_endCallback},
-        m_modified{p_modified},
-        m_lastStatus{false},
-        m_oneShotStatus{NOP},
-        m_startTime{millis()} {
+    m_delayTimeMS{p_delayTimeMS},
+    m_startCallback{p_startCallback},
+    m_endCallback{p_endCallback},
+    m_modified{p_modified},
+    m_lastStatus{false},
+    m_oneShotStatus{NOP},
+    m_startTime{millis()} {
 }
 
 void OneShot::handle() {
     const bool status = m_modified();
-    const uint32_t currentMillis = millis(); 
-    if (status!=m_lastStatus) {
-        m_lastStatus = status; 
-        if (status && m_oneShotStatus==NOP) {
-            m_oneShotStatus=START;
+    const uint32_t currentMillis = millis();
+
+    if (status != m_lastStatus) {
+        m_lastStatus = status;
+
+        if (status && m_oneShotStatus == NOP) {
+            m_oneShotStatus = START;
             m_startTime = currentMillis;
             m_startCallback();
         }
-    } 
-    if ( m_oneShotStatus == END || (m_oneShotStatus == START && ( currentMillis - m_startTime >= m_delayTimeMS))) {
+    }
+
+    if (m_oneShotStatus == END || (m_oneShotStatus == START && (currentMillis - m_startTime >= m_delayTimeMS))) {
         m_endCallback();
         m_oneShotStatus = NOP;
     }

@@ -19,9 +19,9 @@ private:
     uint32_t m_startTime;
 public:
     OneShot(const uint32_t p_delayTimeMS,
-             const CallbackFunction p_startCallback,
-             const CallbackFunction p_endCallback,
-             const ModifiedFunction p_modified);
+            const CallbackFunction p_startCallback,
+            const CallbackFunction p_endCallback,
+            const ModifiedFunction p_modified);
     void handle();
     void direct();
     void hold();

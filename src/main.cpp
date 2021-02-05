@@ -103,13 +103,15 @@ static char gaggia_menu_map[MAX_MENU_STR_LENGTH];
 static const char* gaggia_menu_ptr_map[10];
 static char const* LAST_MENU_ENTRY = "";
 
+SemaphoreHandle_t xSemaphore = NULL;
+
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
 bool saveConfig(const char* filename, Properties& properties);
 
-OneShot saveConfigHandler{
+OneShot saveGaggiaConfigHandler{
     5000,
     []() {
     },
@@ -122,20 +124,34 @@ OneShot saveConfigHandler{
     }
 };
 
+OneShot saveHardwareConfigHandler{
+    5000,
+    []() {
+    },
+    []() {
+        saveConfig(CONTROLLER_CONFIG_FILENAME, controllerConfig);
+        controllerConfigModified = false;
+    },
+    []() {
+        return controllerConfigModified;
+    }
+};
+
 OneShot removeCounterLabel{
     5000,
     []() {
         gaggia_ui_set_visibility(TIMER_BOX, true);
-
     },
     []() {
         gaggia_ui_set_visibility(TIMER_BOX, false);
     },
     []() {
         bool pump = gaggiaIO.pump();
+
         if (pump) {
             removeCounterLabel.hold();
         }
+
         return pump;
     }
 };
@@ -144,8 +160,6 @@ bool loadConfig(const char* filename, Properties& properties) {
     bool ret = false;
 
     if (FileSystemFSBegin()) {
-        Serial.println("mounted file system");
-
         if (FileSystemFS.exists(filename)) {
             //file exists, reading and loading
             File configFile = FileSystemFS.open(filename, "r");
@@ -194,7 +208,6 @@ bool saveConfig(const char* filename, Properties& properties) {
         }
 
         configFile.close();
-        //    FileSystemFS.end();
     }
 
     return ret;
@@ -235,16 +248,7 @@ void handleScriptContext() {
             gaggiaIO.valve(gaggia_scripting_context()->m_valve);
             controller->brewMode(gaggia_scripting_context()->m_brewMode);
             controller->setPoint(gaggia_scripting_context()->m_temperature);
-
-            
-            if (gaggiaIO.pump()) {
-                float pumpMillis = gaggiaIO.pumpMillis() / 1000.f;
-                if (pumpMillis<999.0f) {
-                    dtostrf(pumpMillis, 1, 1, gaggia_ui_set_text_buffer(TIMER_LABEL));
-                    gaggia_ui_set_text_hint(TIMER_LABEL, NULL, 6);
-                }
-            }
-}
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -524,6 +528,18 @@ void setDefaultConfigurations() {
 }
 
 
+void displayUpdateTask(void* pvParameters) {
+     const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+    while (true) {
+        if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
+            display_loop();
+            xSemaphoreGive(xSemaphore);
+        }
+
+        vTaskDelay( xDelay );
+    }
+}
+
 void setup() {
     // Enable serial port
     Serial.begin(115200);
@@ -546,6 +562,17 @@ void setup() {
     setupWifiManager();
     display_init();
     setup_ui_events();
+
+    xSemaphore = xSemaphoreCreateMutex();
+    xTaskCreatePinnedToCore(
+        displayUpdateTask,
+        "displayUpdateTask",
+        10000,      /* Stack size in words */
+        NULL,
+        0,
+        NULL,
+        xPortGetCoreID() ? 0 : 1); /* Pick a core Arduino framework is not using */
+
     effectPeriodStartMillis = millis();
 }
 
@@ -557,13 +584,16 @@ void loop() {
     // Gaggia IO has it's own timer
     gaggiaIO.handle(currentMillis);
 
-    display_loop();
-
     if (currentMillis - effectPeriodStartMillis >= EFFECT_PERIOD_CALLBACK) {
+
         effectPeriodStartMillis += EFFECT_PERIOD_CALLBACK;
         counter50TimesSec++;
 
-        handleScriptContext();
+        if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
+            handleScriptContext();
+            xSemaphoreGive(xSemaphore);
+        }
+
         controller -> handle(currentMillis);
 
         // once a second publish status to mqtt (if there are changes)
@@ -572,32 +602,43 @@ void loop() {
         }
 
         // Maintenance stuff
-        uint8_t slot50 = 0;
-#if SHOW_FREE_HEAP
 
+#if SHOW_FREE_HEAP
         if (counter50TimesSec % 50 == 0) {
             Serial.println(ESP.getFreeHeap());
         }
-
 #endif
+
+        uint8_t slot50 = 0;
 
         if (counter50TimesSec % maxSlots == slot50++) {
             network_handle();
         } else if (counter50TimesSec % maxSlots == slot50++) {
-            if (controllerConfigModified) {
-                controllerConfigModified = false;
-                saveConfig(CONTROLLER_CONFIG_FILENAME, controllerConfig);
-            }
+            saveHardwareConfigHandler.handle();
         } else if (counter50TimesSec % maxSlots == slot50++) {
-         //   saveConfigHandler.handle();
+            saveGaggiaConfigHandler.handle();
         } else if (counter50TimesSec % maxSlots == slot50++) {
             // Temporary untill we have a better spot
-            dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(BREW_TEMP_LABEL));
-            dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(STEAM_TEMP_LABEL));
-            gaggia_ui_set_text(BREW_TEMP_LABEL, NULL);
-            gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
+
+            if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
+                dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(BREW_TEMP_LABEL));
+                dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(STEAM_TEMP_LABEL));
+                gaggia_ui_set_text(BREW_TEMP_LABEL, NULL);
+                gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
+                if (gaggiaIO.pump()) {
+                    const float pumpMillis = gaggiaIO.pumpMillis() / 1000.f;
+                    if (pumpMillis < 999.0f) {
+                        dtostrf(pumpMillis, 1, 1, gaggia_ui_set_text_buffer(TIMER_LABEL));
+                        gaggia_ui_set_text(TIMER_LABEL, NULL);
+                    }
+                }
+                xSemaphoreGive(xSemaphore);
+            }
         } else if (counter50TimesSec % maxSlots == slot50++) {
-            removeCounterLabel.handle();
+            if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
+                removeCounterLabel.handle();
+                xSemaphoreGive(xSemaphore);
+            }
         } else if (counter50TimesSec % maxSlots == slot50++) {
             wm.process();
         } else if (counter50TimesSec % maxSlots == slot50++) {

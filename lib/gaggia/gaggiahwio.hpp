@@ -92,12 +92,10 @@ public:
         }
 
         if (pump) {
-            Serial.println("pump start");
             m_pumpStartTime = millis();
             m_pumpStopTime = 0;
             m_pump = true;
         } else {
-            Serial.println("pump stop");
             m_pumpStopTime = millis();
             m_pump = false;
         }

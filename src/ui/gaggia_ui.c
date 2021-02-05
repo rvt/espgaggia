@@ -216,7 +216,7 @@ static lv_obj_t* spin_create(lv_obj_t* parent,
     return box;
 }
 #if defined (BUILD_NATIVE)
-    const char* map[] = {"Cappuccino", "A. Coffee", ""};
+const char* map[] = {"Cappuccino", "A. Coffee", ""};
 #endif
 
 lv_obj_t* gaggia_brew_options(lv_obj_t* parent) {
