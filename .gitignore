@@ -11,3 +11,4 @@ libtest/
 idea.md
 *.sh
 tmp/
+*.sch-bak

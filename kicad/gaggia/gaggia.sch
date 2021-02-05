@@ -204,15 +204,15 @@ F 3 "" H 1700 4800 50  0001 C CNN
 	1    1700 4800
 	1    0    0    -1  
 $EndComp
-Text Notes 7900 3450 0    197  ~ 0
+Text Notes 7900 3450 0    100  ~ 0
 Steam
-Text Notes 7950 4800 0    197  ~ 0
+Text Notes 7950 4800 0    100  ~ 0
 Brew
-Text Notes 7900 2300 0    197  ~ 0
+Text Notes 7100 2200 0    100  ~ 0
 Boiler
-Text Notes 7900 1150 0    197  ~ 0
+Text Notes 7100 1050 0    100  ~ 0
 Valve
-Text Notes 7900 1700 0    197  ~ 0
+Text Notes 7100 1600 0    100  ~ 0
 Pump
 $Comp
 L Connector:Screw_Terminal_01x02 J1
@@ -297,12 +297,12 @@ Wire Wire Line
 $Comp
 L Connector:Conn_01x04_Male J5
 U 1 1 60351F72
-P 4150 2300
-F 0 "J5" H 4300 2550 50  0000 R CNN
-F 1 "Conn_01x04_Male" H 4500 2050 50  0000 R CNN
-F 2 "" H 4150 2300 50  0001 C CNN
-F 3 "~" H 4150 2300 50  0001 C CNN
-	1    4150 2300
+P 3700 2300
+F 0 "J5" H 3850 2550 50  0000 R CNN
+F 1 "Conn_01x04_Male" H 4050 2050 50  0000 R CNN
+F 2 "" H 3700 2300 50  0001 C CNN
+F 3 "~" H 3700 2300 50  0001 C CNN
+	1    3700 2300
 	-1   0    0    -1  
 $EndComp
 $Comp
@@ -388,7 +388,7 @@ Connection ~ 1950 1100
 Wire Wire Line
 	1950 1100 1950 900 
 Wire Wire Line
-	3950 2500 3300 2500
+	3500 2500 3300 2500
 Wire Wire Line
 	3300 2500 3300 4500
 Wire Wire Line
@@ -520,18 +520,14 @@ Text Label 2550 2600 0    50   ~ 0
 dsp_rst
 Text Label 2550 2700 0    50   ~ 0
 dsp_cs
-Text Label 2550 3000 0    50   ~ 0
-temp_ck
-Text Label 2550 2800 0    50   ~ 0
-temp_do
 Wire Wire Line
 	2300 2800 2550 2800
 Wire Wire Line
 	2550 3000 2300 3000
 Text Label 7500 3250 0    50   ~ 0
-tft_cs
+perf_ck
 Text Label 7500 3350 0    50   ~ 0
-tft_do
+perf_do
 Wire Wire Line
 	7400 3250 7400 4700
 Wire Wire Line
@@ -549,17 +545,13 @@ Wire Wire Line
 Wire Wire Line
 	7050 4900 7500 4900
 Text Label 7500 4900 0    50   ~ 0
-temp_brew_cs
+perf_brew_cs
 Text Label 7500 3550 0    50   ~ 0
-temp_ste_cs
+perf_ste_cs
 Wire Wire Line
 	2300 4100 2550 4100
 Wire Wire Line
 	2300 3700 2550 3700
-Text Label 2550 3700 0    50   ~ 0
-temp_ste_cs
-Text Label 2550 4100 0    50   ~ 0
-temp_brew_cs
 Wire Wire Line
 	2300 3200 3950 3200
 Wire Wire Line
@@ -588,16 +580,28 @@ Text Label 2550 2400 0    50   ~ 0
 dsp_dc
 Text Label 2550 4200 0    50   ~ 0
 ssr_pump
-Text Label 2550 4300 0    50   ~ 0
-ssr_pump
 Text Label 2550 3900 0    50   ~ 0
 ssr_valve
 Wire Wire Line
-	2300 2200 3950 2200
+	2300 2200 3500 2200
 Wire Wire Line
-	3950 2300 3100 2300
+	3500 2300 3100 2300
 Wire Wire Line
-	3950 2400 3200 2400
+	3500 2400 3200 2400
 Wire Wire Line
 	3200 2400 3200 4400
+Text Label 2550 4300 0    50   ~ 0
+ssr_boiler
+Text Label 2550 3000 0    50   ~ 0
+perf_ck
+Text Label 2550 2800 0    50   ~ 0
+perf_do
+Text Label 2550 3700 0    50   ~ 0
+perf_ste_cs
+Text Label 2550 4100 0    50   ~ 0
+perf_brew_cs
+Text Notes 7500 2800 2    100  ~ 0
+Temperature Sensors
+Text Notes 4450 3050 2    100  ~ 0
+Buttons
 $EndSCHEMATC
