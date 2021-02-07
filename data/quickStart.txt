@@ -1,11 +1,10 @@
 TitleOff=1;
-PumpMillis=0;
 pump=0;
 valve=0;
-brewTemp=90;
+brewTemp=85;
 BrewOrSteamButton=1,isOn,isOn,isOff;
 label=isOn;
-Display=Turn off brew and steam;
+Message=Turn off brew and steam;
 BrewAndSteamButton=0;
 label=isOff;
 DisplayOff=1;

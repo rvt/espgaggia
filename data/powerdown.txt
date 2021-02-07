@@ -1,0 +1,12 @@
+Message=Power Down,-;
+pump=0;
+valve=0;
+brewMode=1;
+setTemp=5;
+BrewOrSteamButton=1,isOn,isOn,isOff;
+label=isOn;
+BrewAndSteamButton=0;
+label=isOff;
+BrewOrSteamButton=1,load,load;
+label=load;
+load=/quickStart.txt;

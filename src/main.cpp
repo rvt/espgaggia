@@ -77,7 +77,8 @@ bool configModified = false;
 
 // CRC value of last update to MQTT
 uint16_t lastMeasurementCRC = 0;
-uint32_t shouldRestart = 0;        // Indicate that a service requested an restart. Set to millies() of current time and it will restart 5000ms later
+// Indicate that a service requested an restart. Set to millies() of current time and it will restart 5000ms later
+uint32_t shouldRestart = 0;
 
 // I/O Sensors and devices
 std::unique_ptr<GaggiaClassicController> controller(nullptr);
@@ -153,6 +154,44 @@ OneShot removeCounterLabel{
         }
 
         return pump;
+    }
+};
+
+// OneShot hardwareMonitor {
+//     60*1000*3,
+//     []() {},
+//     []() {
+//         gaggia_scripting_load("/quickStart.txt");
+//     },
+//     []() {
+//         if (!gaggiaIO.pump() &&) {
+
+//         }
+//         return !gaggiaIO.pump();
+//     }
+// };
+
+OneShot powerDownMonitor {
+    //TODO: Make this a configuration
+    60 * 1000 * 2,
+    []() {},
+    []() {
+        gaggia_scripting_load("/powerdown.txt");
+    },
+    []() {
+        return false;
+    }
+};
+
+OneShot powerSaveMonitor {
+    //TODO: Make this a configuration
+    60 * 1000 * 1,
+    []() {},
+    []() {
+        gaggia_scripting_load("/powersave.txt");
+    },
+    []() {
+        return false;
     }
 };
 
@@ -240,7 +279,7 @@ void handleScriptContext() {
             gaggiaIO.valve(false);
             controller->brewMode(true);
             controller->setPoint(gaggiaConfig.get("defaultBrewTemp"));
-            gaggia_scripting_load("/standby.txt");
+            gaggia_scripting_load(QUICKSTART_SCRIPT);
             break;
 
         case 1:
@@ -474,7 +513,12 @@ void setup_ui_events() {
 
     // Events
     gaggia_ui_add_event_cb(STOP_BUTTON, [](enum ui_element_types label, enum ui_event event) {
-        gaggia_scripting_load("/startup.txt");
+        gaggia_scripting_load(STARTUP_SCRIPT);
+    });
+
+    gaggia_ui_add_event_cb(GENERIC_UI_INTERACTION, [](enum ui_element_types label, enum ui_event event) {
+        powerSaveMonitor.hold();
+        powerDownMonitor.hold();
     });
 
     gaggia_ui_add_event_cb(BREWTEMP_SPIN, [](enum ui_element_types label, enum ui_event event) {
@@ -521,6 +565,9 @@ void setDefaultConfigurations() {
     controllerConfig.put("mqttBaseTopic", PV(mqttBaseTopic));
     controllerConfig.put("mqttLastWillTopic", PV(mqttLastWillTopic));
 
+
+    //    controllerConfig.put("standbyTime", PV(15*60));
+
     // gaggiaConfig
     configModified |= gaggiaConfig.putNotContains("defaultBrewTemp", PV(94.0f));
     configModified |= gaggiaConfig.putNotContains("defaultSteamTemp", PV(145.0f));
@@ -529,14 +576,15 @@ void setDefaultConfigurations() {
 
 
 void displayUpdateTask(void* pvParameters) {
-     const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+
     while (true) {
         if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
             display_loop();
             xSemaphoreGive(xSemaphore);
         }
 
-        vTaskDelay( xDelay );
+        vTaskDelay(xDelay);
     }
 }
 
@@ -555,7 +603,7 @@ void setup() {
 
     setupIOHardware();
     gaggia_scripting_init(&gaggiaIO);
-    gaggia_scripting_load("/startup.txt");
+    gaggia_scripting_load(STARTUP_SCRIPT);
 
     network_init();
     setupMQTTCallback();
@@ -574,6 +622,8 @@ void setup() {
         xPortGetCoreID() ? 0 : 1); /* Pick a core Arduino framework is not using */
 
     effectPeriodStartMillis = millis();
+    powerSaveMonitor.trigger();
+    powerDownMonitor.trigger();
 }
 
 constexpr uint8_t NUMBER_OF_SLOTS = 10;
@@ -603,10 +653,12 @@ void loop() {
 
         // Maintenance stuff
 
-#if SHOW_FREE_HEAP
+#if SHOW_FREE_HEAP==1
+
         if (counter50TimesSec % 50 == 0) {
             Serial.println(ESP.getFreeHeap());
         }
+
 #endif
 
         uint8_t slot50 = 0;
@@ -618,6 +670,9 @@ void loop() {
         } else if (counter50TimesSec % maxSlots == slot50++) {
             saveGaggiaConfigHandler.handle();
         } else if (counter50TimesSec % maxSlots == slot50++) {
+            powerSaveMonitor.handle();
+            powerDownMonitor.handle();
+        } else if (counter50TimesSec % maxSlots == slot50++) {
             // Temporary untill we have a better spot
 
             if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
@@ -625,13 +680,19 @@ void loop() {
                 dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(STEAM_TEMP_LABEL));
                 gaggia_ui_set_text(BREW_TEMP_LABEL, NULL);
                 gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
+
                 if (gaggiaIO.pump()) {
+                    powerSaveMonitor.hold();
+                    powerDownMonitor.hold();
+
                     const float pumpMillis = gaggiaIO.pumpMillis() / 1000.f;
+
                     if (pumpMillis < 999.0f) {
                         dtostrf(pumpMillis, 1, 1, gaggia_ui_set_text_buffer(TIMER_LABEL));
                         gaggia_ui_set_text(TIMER_LABEL, NULL);
                     }
                 }
+
                 xSemaphoreGive(xSemaphore);
             }
         } else if (counter50TimesSec % maxSlots == slot50++) {

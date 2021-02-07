@@ -54,6 +54,17 @@ bool getBoolValue(const char* value, uint8_t pos) {
     return rValue;
 }
 
+
+float getFloatValue(const char* value, uint8_t pos) {
+    float rValue = 0.0f;
+    OptParser::get<SCRIPT_LINE_SIZE_MAX>(value, ',', [&](const OptValue & parsed) {
+        if (parsed.pos() == pos) {
+            rValue = (float)parsed;
+        }
+    });
+    return rValue;
+}
+
 void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
     scripting_gaggiaIO = gaggiaIO;
     std::vector<Command<GaggiaScriptContext>*> commands;
@@ -62,21 +73,44 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
         return true;
     }
                                                         });
+
     commands.push_back(new Command<GaggiaScriptContext> {"pump", [](const char* value, GaggiaScriptContext & context) {
         context.m_pump = atoi(value);
         return true;
     }
                                                         });
 
+    commands.push_back(new Command<GaggiaScriptContext> {"brewMode", [](const char* value, GaggiaScriptContext & context) {
+        context.m_brewMode = getBoolValue(value, 0);
+        return true;
+    }
+                                                        });
+
+    commands.push_back(new Command<GaggiaScriptContext> {"setTemp", [](const char* value, GaggiaScriptContext & context) {
+        float tempValue;
+
+        if (gaggiaConfig.contains(value)) {
+            tempValue = (float)gaggiaConfig.get(value);
+        } else {
+            tempValue = atof(value);
+        }
+
+        context.m_temperature = tempValue;
+        return true;
+    }
+                                                        });
+
     commands.push_back(new Command<GaggiaScriptContext> {"brewTemp", [](const char* value, GaggiaScriptContext & context) {
         context.m_brewMode = true;
-        auto tempValue = atof(value);
+        float tempValue;
 
-        if (tempValue < 0) {
-            context.m_temperature = (float)gaggiaConfig.get("defaultBrewTemp");
+        if (gaggiaConfig.contains(value)) {
+            tempValue = (float)gaggiaConfig.get(value);
         } else {
-            context.m_temperature = tempValue;
+            tempValue = atof(value);
         }
+
+        context.m_temperature = tempValue;
 
 #if defined (DONT_WAIT_FOR_TEMPS)
         return true;
@@ -86,14 +120,16 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
     }
                                                         });
     commands.push_back(new Command<GaggiaScriptContext> {"steamTemp", [](const char* value, GaggiaScriptContext & context) {
-        context.m_brewMode = false;
-        auto tempValue = atof(value);
+        context.m_brewMode = true;
+        float tempValue;
 
-        if (tempValue < 0) {
-            context.m_temperature = (float)gaggiaConfig.get("defaultSteamTemp");
+        if (gaggiaConfig.contains(value)) {
+            tempValue = (float)gaggiaConfig.get(value);
         } else {
-            context.m_temperature = tempValue;
+            tempValue = atof(value);
         }
+
+        context.m_temperature = tempValue;
 
 #if defined (DONT_WAIT_FOR_TEMPS)
         return true;
@@ -102,36 +138,29 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
 #endif
     }
                                                         });
-    commands.push_back(new Command<GaggiaScriptContext> {"Display", [](const char* value, GaggiaScriptContext & context) {
+    commands.push_back(new Command<GaggiaScriptContext> {"Message", [](const char* value, GaggiaScriptContext & context) {
         Serial.println(value);
-        gaggia_ui_set_visibility(PROCESS_MESSAGE_CONTAINER, true);
-        gaggia_ui_set_text(PROCESS_MESSAGE_LABEL, value);
-        return true;
-    }
-                                                        });
 
-    commands.push_back(new Command<GaggiaScriptContext> {"PumpMillis", [](const char* value, GaggiaScriptContext & context) {
-        // gaggia_ui_set_visibility(TIMER_BOX, atoi(value));
-        Serial.println("PumpMillis is deprecated");
-        return true;
-    }
-                                                        });
-    commands.push_back(new Command<GaggiaScriptContext> {"Title", [](const char* value, GaggiaScriptContext & context) {
-        Serial.println((char*)value);
+        OptParser::get<SCRIPT_LINE_SIZE_MAX>(value, ',', [&](const OptValue & parsed) {
+            switch (parsed.pos()) {
+                case 0:
+                    gaggia_ui_set_text(PROCESS_MESSAGE_LABEL, (char*)parsed);
+                    gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, "");
+                    break;
+
+                case 1:
+                    gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, (char*)parsed);
+                    break;
+            }
+        });
+
         gaggia_ui_set_visibility(PROCESS_MESSAGE_CONTAINER, true);
-        gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, value);
-        return true;
-    }
-                                                        });
-    commands.push_back(new Command<GaggiaScriptContext> {"TitleOff", [](const char* value, GaggiaScriptContext & context) {
-        gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, "");
         return true;
     }
                                                         });
 
     commands.push_back(new Command<GaggiaScriptContext> {"DisplayOff", [](const char* value, GaggiaScriptContext & context) {
         Serial.println("Display Off");
-        gaggia_ui_set_text(PROCESS_MESSAGE_LABEL, "");
         gaggia_ui_set_visibility(PROCESS_MESSAGE_CONTAINER, false);
         return true;
     }
@@ -225,7 +254,7 @@ void gaggia_load_script() {
         // Serial.println(scriptContextFileToLoad);
     }
 
-    scriptContextFileToLoad[0] = 0;
+    scriptContextFileToLoad[0] = '\0';
 }
 
 void gaggia_scripting_load(const char* value) {
@@ -239,12 +268,7 @@ int8_t gaggia_scripting_handle() {
         return -1;
     }
 
-    if (scriptRunner->handle(*scriptContext)) {
-        return 1;
-    } else {
-        scriptContext = nullptr;
-        return 0;
-    }
+    return scriptRunner->handle(*scriptContext);
 }
 
 GaggiaScriptContext* gaggia_scripting_context() {

@@ -86,6 +86,7 @@ public:
     virtual bool pump() const {
         return m_pump && m_brewButton->current();
     }
+
     virtual void pump(bool pump) {
         if (pump == m_pump) {
             return;

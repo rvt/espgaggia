@@ -19,6 +19,10 @@ constexpr uint8_t PERI_PIN_SPI_CLK = CONFIG_PERI_PIN_SPI_CLK;
 #define CONTROLLER_CONFIG_FILENAME "/controllerCfg.conf"
 #define CONFIG_FILENAME "/gaggiaCfg.conf"
 
+
+#define STARTUP_SCRIPT "/startup.txt"
+#define QUICKSTART_SCRIPT "/quickStart.txt"
+
 // The value of the Rref resistor. Use 430.0 for PT100 and 4300.0 for PT1000
 constexpr float RREF_OVEN = 430.0;
 

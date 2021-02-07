@@ -70,7 +70,6 @@ static void generic_event_handler(lv_obj_t* obj, lv_event_t event) {
             return;
         }
 
-        ui_elements[id].event_cb(id, EV_CHANGE);
 
         // if (id == PROCESS_SELECT_MATRIX) {
         //     const char* txt = lv_btnmatrix_get_active_btn_text(obj);
@@ -78,6 +77,12 @@ static void generic_event_handler(lv_obj_t* obj, lv_event_t event) {
         //     printf("%s was pressed\n", txt);
         // }
     }
+
+    // Call generic handler
+    if (ui_elements[GENERIC_UI_INTERACTION].event_cb != NULL) {
+        ui_elements[GENERIC_UI_INTERACTION].event_cb(GENERIC_UI_INTERACTION, _NA);
+    }
+
 }
 
 
@@ -472,7 +477,10 @@ void gaggia_ui_set_visibility(enum ui_element_types label, bool en) {
 }
 
 void gaggia_ui_add_event_cb(enum ui_element_types label, gaggia_ui_event event) {
-    lv_obj_set_event_cb(ui_elements[label].element, generic_event_handler);
+    if (ui_elements[label].element) {
+        lv_obj_set_event_cb(ui_elements[label].element, generic_event_handler);
+    }
+
     ui_elements[label].event_cb = event;
 }
 

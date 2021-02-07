@@ -23,6 +23,16 @@ public:
             const CallbackFunction p_endCallback,
             const ModifiedFunction p_modified);
     void handle();
-    void direct();
+    void flush();
+
+    bool lastStatus() const;
+
+    // Will trigger a start
+    void trigger();
+
+    /* Will stop the counter back to it's initial state */
+    void reset();
+
+    /* Will set counter to current, effecticly starts the one shot timer again */
     void hold();
 };

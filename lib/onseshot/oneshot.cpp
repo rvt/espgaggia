@@ -23,28 +23,39 @@ OneShot::OneShot(
 
 void OneShot::handle() {
     const bool status = m_modified();
-    const uint32_t currentMillis = millis();
 
-    if (status != m_lastStatus) {
-        m_lastStatus = status;
-
-        if (status && m_oneShotStatus == NOP) {
-            m_oneShotStatus = START;
-            m_startTime = currentMillis;
-            m_startCallback();
-        }
+    if (status && m_lastStatus == false && m_oneShotStatus == NOP) {
+        trigger();
     }
 
+    m_lastStatus = status;
+
+    const uint32_t currentMillis = millis();
+
     if (m_oneShotStatus == END || (m_oneShotStatus == START && (currentMillis - m_startTime >= m_delayTimeMS))) {
-        m_endCallback();
-        m_oneShotStatus = NOP;
+        flush();
     }
 }
 
-void OneShot::direct() {
-    m_oneShotStatus = END;
+void OneShot::flush() {
+    m_endCallback();
+    m_oneShotStatus = NOP;
+}
+
+bool OneShot::lastStatus() const {
+    return m_lastStatus;
+}
+
+void OneShot::trigger() {
+    m_oneShotStatus = START;
+    m_startTime = millis();
+    m_startCallback();
 }
 
 void OneShot::hold() {
     m_startTime = millis();
+}
+
+void OneShot::reset() {
+    m_oneShotStatus = NOP;
 }

@@ -1,4 +1,4 @@
 pump=0;
 valve=0;
-brewTemp=90;
-load=/standby.txt;
+brewTemp=85;
+load=/quickStart.txt;

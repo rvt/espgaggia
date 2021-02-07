@@ -43,6 +43,7 @@ enum ui_element_types {
     BREW_BUT_STATUS,
     STEAM_BUT_STATUS,
 #endif
+    GENERIC_UI_INTERACTION,
     _LAST_ITEM_STUB
 };
 
