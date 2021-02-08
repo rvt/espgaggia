@@ -173,7 +173,7 @@ OneShot removeCounterLabel{
 
 OneShot powerDownMonitor {
     //TODO: Make this a configuration
-    60 * 1000 * 2,
+    60 * 1000 * 30,
     []() {},
     []() {
         gaggia_scripting_load("/powerdown.txt");
@@ -185,7 +185,7 @@ OneShot powerDownMonitor {
 
 OneShot powerSaveMonitor {
     //TODO: Make this a configuration
-    60 * 1000 * 1,
+    60 * 1000 * 15,
     []() {},
     []() {
         gaggia_scripting_load("/powersave.txt");
@@ -517,8 +517,8 @@ void setup_ui_events() {
     });
 
     gaggia_ui_add_event_cb(GENERIC_UI_INTERACTION, [](enum ui_element_types label, enum ui_event event) {
-        powerSaveMonitor.hold();
-        powerDownMonitor.hold();
+        powerSaveMonitor.trigger();
+        powerDownMonitor.trigger();
     });
 
     gaggia_ui_add_event_cb(BREWTEMP_SPIN, [](enum ui_element_types label, enum ui_event event) {
@@ -681,9 +681,10 @@ void loop() {
                 gaggia_ui_set_text(BREW_TEMP_LABEL, NULL);
                 gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
 
+                removeCounterLabel.handle();
                 if (gaggiaIO.pump()) {
-                    powerSaveMonitor.hold();
-                    powerDownMonitor.hold();
+                    powerSaveMonitor.trigger();
+                    powerDownMonitor.trigger();
 
                     const float pumpMillis = gaggiaIO.pumpMillis() / 1000.f;
 
@@ -693,11 +694,6 @@ void loop() {
                     }
                 }
 
-                xSemaphoreGive(xSemaphore);
-            }
-        } else if (counter50TimesSec % maxSlots == slot50++) {
-            if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
-                removeCounterLabel.handle();
                 xSemaphoreGive(xSemaphore);
             }
         } else if (counter50TimesSec % maxSlots == slot50++) {

@@ -12,3 +12,4 @@ idea.md
 *.sh
 tmp/
 *.sch-bak
+gaggia_print/
