@@ -438,7 +438,6 @@ void gaggia_ui_set_text_hint(enum ui_element_types label, const char* value, siz
     if (value == NULL) {
         lv_label_set_text_static(ui_elements[label].element, NULL);
         lv_obj_realign(ui_elements[label].element);
-        //printf(text_elements[label].text);
         return;
     }
 
@@ -453,18 +452,14 @@ void gaggia_ui_set_text_hint(enum ui_element_types label, const char* value, siz
         text_elements[label].text = malloc(requestSize);
 
         if (text_elements[label].text != NULL) {
-            text_elements[label].text[0] = '\0';
             text_elements[label].length = requestSize;
         }
     }
 
     if (text_elements[label].text != NULL) {
-        if (memcmp(value, text_elements[label].text, strLen) != 0) {
-            memcpy(text_elements[label].text, value, strLen);
-            text_elements[label].text[strLen] = '\0';
-            lv_label_set_text_static(ui_elements[label].element, text_elements[label].text);
-            lv_obj_realign(ui_elements[label].element);
-        }
+        strncpy(text_elements[label].text, value, text_elements[label].length);
+        lv_label_set_text_static(ui_elements[label].element, text_elements[label].text);
+        lv_obj_realign(ui_elements[label].element);
     }
 }
 

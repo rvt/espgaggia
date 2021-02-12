@@ -1,4 +1,4 @@
-Message=Power Down,-;
+Message=Power Down,;
 pump=0;
 valve=0;
 brewMode=1;

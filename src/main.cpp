@@ -173,7 +173,7 @@ OneShot removeCounterLabel{
 
 OneShot powerDownMonitor {
     //TODO: Make this a configuration
-    60 * 1000 * 30,
+    60 * 1000 * 45,
     []() {},
     []() {
         gaggia_scripting_load("/powerdown.txt");

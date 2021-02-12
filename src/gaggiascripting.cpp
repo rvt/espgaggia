@@ -145,7 +145,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
             switch (parsed.pos()) {
                 case 0:
                     gaggia_ui_set_text(PROCESS_MESSAGE_LABEL, (char*)parsed);
-                    gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, "");
+//                    gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, "");
                     break;
 
                 case 1:
@@ -159,24 +159,20 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
     }
                                                         });
 
-    commands.push_back(new Command<GaggiaScriptContext> {"DisplayOff", [](const char* value, GaggiaScriptContext & context) {
-        Serial.println("Display Off");
+    commands.push_back(new Command<GaggiaScriptContext> {"MessageOff", [](const char* value, GaggiaScriptContext & context) {
+        Serial.println("Message Off");
         gaggia_ui_set_visibility(PROCESS_MESSAGE_CONTAINER, false);
         return true;
     }
                                                         });
     commands.push_back(new Command<GaggiaScriptContext> {"question", [](const char* value, GaggiaScriptContext & context) {
-        if (context.advanced()) {
-            // Serial.print(F("Question:"));
-            // Serial.println((char*)value);
-        }
 
         return true;
     }
                                                         });
     commands.push_back(new Command<GaggiaScriptContext> {"load", [&](const char* value, GaggiaScriptContext & context) {
         strncpy(scriptContextFileToLoad, (char*)value, sizeof(scriptContextFileToLoad));
-        return true;
+        return false;
     }
                                                         });
 
@@ -250,8 +246,8 @@ void gaggia_load_script() {
         delete scriptContext;
         scriptContext = new GaggiaScriptContext{scripting_gaggiaIO, buffer};
     } else {
-        // Serial.print(F("File not found: "));
-        // Serial.println(scriptContextFileToLoad);
+        Serial.print(F("File not found: "));
+        Serial.println(scriptContextFileToLoad);
     }
 
     scriptContextFileToLoad[0] = '\0';
@@ -268,7 +264,7 @@ int8_t gaggia_scripting_handle() {
         return -1;
     }
 
-    return scriptRunner->handle(*scriptContext);
+    return scriptRunner->handle(*scriptContext, true);
 }
 
 GaggiaScriptContext* gaggia_scripting_context() {

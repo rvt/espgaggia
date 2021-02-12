@@ -1,4 +1,5 @@
 TitleOff=1;
+Message=,;
 pump=0;
 valve=0;
 brewTemp=85;
@@ -7,7 +8,7 @@ label=isOn;
 Message=Turn off brew and steam;
 BrewAndSteamButton=0;
 label=isOff;
-DisplayOff=1;
+MessageOff=1;
 BrewOrSteamButton=1,brew,steam;
 label=brew;
 load=/brew.txt;

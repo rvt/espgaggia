@@ -21,4 +21,4 @@ wait=100;
 valve=0;
 Message=Done;
 wait=2500;
-DisplayOff=1;
+MessageOff=1;

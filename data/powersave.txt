@@ -1,4 +1,4 @@
-Message=Power safe,-;
+Message=Power safe,;
 TitleOff=1;
 pump=0;
 valve=0;
