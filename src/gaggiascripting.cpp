@@ -145,7 +145,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
             switch (parsed.pos()) {
                 case 0:
                     gaggia_ui_set_text(PROCESS_MESSAGE_LABEL, (char*)parsed);
-//                    gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, "");
+                    //                    gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, "");
                     break;
 
                 case 1:

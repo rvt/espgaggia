@@ -105,7 +105,6 @@ bool xpt2046_read(lv_indev_drv_t* drv, lv_indev_data_t* data) {
         last_y = y;
 
         ESP_LOGI(TAG, "x = %d, y = %d", x, y);
-
     } else {
         avg_last = 0;
     }

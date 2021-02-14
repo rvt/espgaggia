@@ -13,6 +13,7 @@ extern "C" {
 /*********************
  *      INCLUDES
  *********************/
+
 #include <stdint.h>
 #include <stdbool.h>
 #ifdef LV_LVGL_H_INCLUDE_SIMPLE

@@ -1,8 +1,9 @@
-Message=Power Down,;
+Message=Power safe,;
+TitleOff=1;
 pump=0;
 valve=0;
 brewMode=1;
-setTemp=0;
+setTemp=powerSaveTemp;
 BrewOrSteamButton=1,isOn,isOn,isOff;
 label=isOn;
 BrewAndSteamButton=0;

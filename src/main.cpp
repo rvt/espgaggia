@@ -682,6 +682,7 @@ void loop() {
                 gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
 
                 removeCounterLabel.handle();
+
                 if (gaggiaIO.pump()) {
                     powerSaveMonitor.trigger();
                     powerDownMonitor.trigger();
