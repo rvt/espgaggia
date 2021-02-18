@@ -6,6 +6,8 @@
 #include <lvgl_helpers.h>
 
 static lv_disp_buf_t disp_buf;
+static lv_disp_drv_t disp_drv;
+static lv_indev_drv_t indev_drv;
 
 #if LV_USE_LOG != 0
 /* Serial debugging */
@@ -33,7 +35,7 @@ void display_init() {
     uint32_t size_in_px = DISP_BUF_SIZE;
     lv_disp_buf_init(&disp_buf, buf1, buf2, size_in_px);
 
-    lv_disp_drv_t disp_drv;
+
     lv_disp_drv_init(&disp_drv);
     disp_drv.flush_cb = disp_driver_flush;
 
@@ -41,7 +43,7 @@ void display_init() {
     lv_disp_drv_register(&disp_drv);
 
     /* Register an input device when enabled on the menuconfig */
-    lv_indev_drv_t indev_drv;
+
     lv_indev_drv_init(&indev_drv);
     indev_drv.read_cb = touch_driver_read;
     indev_drv.type = LV_INDEV_TYPE_POINTER;

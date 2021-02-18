@@ -46,26 +46,23 @@ typedef PropertyValue PV;
 uint32_t counter50TimesSec = 1;
 
 // Number calls per second we will be handling
-constexpr uint8_t FRAMES_PER_SECOND        = 50;
-constexpr uint16_t EFFECT_PERIOD_CALLBACK = (1000 / FRAMES_PER_SECOND);
+constexpr uint16_t TICK50MS_PERIOD = (1000 / 50);
+constexpr uint16_t TICK10MS_PERIOD = (1000 / 100);
 constexpr uint8_t LINE_BUFFER_SIZE = 128;
 constexpr uint8_t PARAMETER_SIZE = 16;
 
-// Keep track when the last time we ran the effect state changes
-uint32_t effectPeriodStartMillis = 0;
-
 // WiFI Manager
-WiFiManager wm;
+WiFiManager wifiManager;
 #define MQTT_SERVER_LENGTH 40
 #define MQTT_PORT_LENGTH 5
 #define MQTT_USERNAME_LENGTH 18
 #define MQTT_PASSWORD_LENGTH 18
-WiFiManagerParameter wm_mqtt_server("server", "mqtt server", "", MQTT_SERVER_LENGTH);
-WiFiManagerParameter wm_mqtt_port("port", "mqtt port", "", MQTT_PORT_LENGTH);
-WiFiManagerParameter wm_mqtt_user("user", "mqtt username", "", MQTT_USERNAME_LENGTH);
+WiFiManagerParameter wifiManager_mqtt_server("server", "mqtt server", "", MQTT_SERVER_LENGTH);
+WiFiManagerParameter wifiManager_mqtt_port("port", "mqtt port", "", MQTT_PORT_LENGTH);
+WiFiManagerParameter wifiManager_mqtt_user("user", "mqtt username", "", MQTT_USERNAME_LENGTH);
 
 const char _customHtml_hidden[] = "type=\"password\"";
-WiFiManagerParameter wm_mqtt_password("input", "mqtt password", "", MQTT_PASSWORD_LENGTH, _customHtml_hidden, WFM_LABEL_AFTER);
+WiFiManagerParameter wifiManager_mqtt_password("input", "mqtt password", "", MQTT_PASSWORD_LENGTH, _customHtml_hidden, WFM_LABEL_AFTER);
 
 
 // Stores information about the controller on communication level
@@ -258,7 +255,6 @@ bool saveConfig(const char* filename, Properties& properties) {
 
 
 void handleScriptContext() {
-    int8_t handle = gaggia_scripting_handle();
 
 #if defined (GUI_IO)
     gaggia_ui_set_led(BREW_BUT_STATUS, uiBrewButton);
@@ -269,9 +265,9 @@ void handleScriptContext() {
         gaggia_ui_set_led(VALVE_STATUS_SSR, gaggia_scripting_context()->m_valve);
         gaggia_ui_set_led(PUMP_STATUS_SSR, gaggia_scripting_context()->m_pump);
     }
-
 #endif
 
+    int8_t handle = gaggia_scripting_handle();
     switch (handle) {
         case 0:
             Serial.println("Script ended");
@@ -414,18 +410,18 @@ void setupIOHardware() {
 void saveParamCallback() {
     Serial.println("[CALLBACK] saveParamCallback fired");
 
-    if (std::strlen(wm_mqtt_server.getValue()) > 0) {
-        controllerConfig.put("mqttServer", PV(wm_mqtt_server.getValue()));
-        controllerConfig.put("mqttPort", PV(std::atoi(wm_mqtt_port.getValue())));
-        controllerConfig.put("mqttUsername", PV(wm_mqtt_user.getValue()));
-        controllerConfig.put("mqttPassword", PV(wm_mqtt_password.getValue()));
+    if (std::strlen(wifiManager_mqtt_server.getValue()) > 0) {
+        controllerConfig.put("mqttServer", PV(wifiManager_mqtt_server.getValue()));
+        controllerConfig.put("mqttPort", PV(std::atoi(wifiManager_mqtt_port.getValue())));
+        controllerConfig.put("mqttUsername", PV(wifiManager_mqtt_user.getValue()));
+        controllerConfig.put("mqttPassword", PV(wifiManager_mqtt_password.getValue()));
         controllerConfigModified = true;
         // Redirect from MQTT so on the next reconnect we pickup new values
         network_mqtt_disconnect();
         // Send redirect back to param page
-        wm.server->sendHeader(F("Location"), F("/param?"), true);
-        wm.server->send(302, FPSTR(HTTP_HEAD_CT2), "");   // Empty content inhibits Content-length header so we have to close the socket ourselves.
-        wm.server->client().stop();
+        wifiManager.server->sendHeader(F("Location"), F("/param?"), true);
+        wifiManager.server->send(302, FPSTR(HTTP_HEAD_CT2), "");   // Empty content inhibits Content-length header so we have to close the socket ourselves.
+        wifiManager.server->client().stop();
     }
 }
 
@@ -435,32 +431,32 @@ void saveParamCallback() {
 void setupWifiManager() {
     char port[6];
     snprintf(port, sizeof(port), "%d", (int16_t)controllerConfig.get("mqttPort"));
-    wm_mqtt_port.setValue(port, MQTT_PORT_LENGTH);
-    wm_mqtt_password.setValue(controllerConfig.get("mqttPassword"), MQTT_PASSWORD_LENGTH);
-    wm_mqtt_user.setValue(controllerConfig.get("mqttUsername"), MQTT_USERNAME_LENGTH);
-    wm_mqtt_server.setValue(controllerConfig.get("mqttServer"), MQTT_SERVER_LENGTH);
+    wifiManager_mqtt_port.setValue(port, MQTT_PORT_LENGTH);
+    wifiManager_mqtt_password.setValue(controllerConfig.get("mqttPassword"), MQTT_PASSWORD_LENGTH);
+    wifiManager_mqtt_user.setValue(controllerConfig.get("mqttUsername"), MQTT_USERNAME_LENGTH);
+    wifiManager_mqtt_server.setValue(controllerConfig.get("mqttServer"), MQTT_SERVER_LENGTH);
 
-    wm.addParameter(&wm_mqtt_server);
-    wm.addParameter(&wm_mqtt_port);
-    wm.addParameter(&wm_mqtt_user);
-    wm.addParameter(&wm_mqtt_password);
+    wifiManager.addParameter(&wifiManager_mqtt_server);
+    wifiManager.addParameter(&wifiManager_mqtt_port);
+    wifiManager.addParameter(&wifiManager_mqtt_user);
+    wifiManager.addParameter(&wifiManager_mqtt_password);
 
     /////////////////
     // set country
-    wm.setClass("invert");
-    wm.setCountry("US"); // setting wifi country seems to improve OSX soft ap connectivity, may help others as well
+    wifiManager.setClass("invert");
+    wifiManager.setCountry("US"); // setting wifi country seems to improve OSX soft ap connectivity, may help others as well
 
     // Set configuration portal
-    wm.setShowStaticFields(false);
-    wm.setConfigPortalBlocking(false); // Must be blocking or else AP stays active
-    wm.setDebugOutput(true);
-    wm.setSaveParamsCallback(saveParamCallback);
-    wm.setHostname(controllerConfig.get("mqttClientID"));
+    wifiManager.setShowStaticFields(false);
+    wifiManager.setConfigPortalBlocking(false); // Must be blocking or else AP stays active
+    wifiManager.setDebugOutput(true);
+    wifiManager.setSaveParamsCallback(saveParamCallback);
+    wifiManager.setHostname(controllerConfig.get("mqttClientID"));
     std::vector<const char*> menu = {"wifi", "wifinoscan", "info", "param", "sep", "erase", "restart"};
-    wm.setMenu(menu);
+    wifiManager.setMenu(menu);
 
-    wm.startWebPortal();
-    wm.autoConnect(controllerConfig.get("mqttClientID"));
+    wifiManager.startWebPortal();
+    wifiManager.autoConnect(controllerConfig.get("mqttClientID"));
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -575,7 +571,7 @@ void setDefaultConfigurations() {
 }
 
 
-void displayUpdateTask(void* pvParameters) {
+void displayTask(void* pvParameters) {
     const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
 
     while (true) {
@@ -587,6 +583,101 @@ void displayUpdateTask(void* pvParameters) {
         vTaskDelay(xDelay);
     }
 }
+
+// Keep track when the last time we ran the effect state changes
+uint32_t tick50Millis = 0;
+uint32_t tick10Millis = 0;
+uint8_t maxSlots = 255;
+void loop() {
+    const uint32_t currentMillis = millis();
+
+    if (currentMillis - tick50Millis >= TICK50MS_PERIOD) {
+
+        tick50Millis = currentMillis;
+        counter50TimesSec++;
+
+        controller -> handle(currentMillis);
+
+        // once a second publish status to mqtt (if there are changes)
+        if (counter50TimesSec % 50 == 0) {
+            publishStatusToMqtt();
+        }
+
+        // Maintenance stuff
+#if SHOW_FREE_HEAP==1
+        if (counter50TimesSec % 50 == 0) {
+            Serial.println(ESP.getFreeHeap());
+        }
+#endif
+
+        uint8_t slot50 = 0;
+        if (counter50TimesSec % maxSlots == slot50++) {
+            network_handle();
+        } else if (counter50TimesSec % maxSlots == slot50++) {
+            saveHardwareConfigHandler.handle();
+        } else if (counter50TimesSec % maxSlots == slot50++) {
+            saveGaggiaConfigHandler.handle();
+        } else if (counter50TimesSec % maxSlots == slot50++) {
+            powerSaveMonitor.handle();
+            powerDownMonitor.handle();
+        } else if (counter50TimesSec % maxSlots == slot50++) {
+
+            // Temporary untill we have a better spot
+            if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
+                dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(BREW_TEMP_LABEL));
+                dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(STEAM_TEMP_LABEL));
+                gaggia_ui_set_text(BREW_TEMP_LABEL, NULL);
+                gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
+
+                removeCounterLabel.handle();
+
+                if (gaggiaIO.pump()) {
+                    powerSaveMonitor.trigger();
+                    powerDownMonitor.trigger();
+                }
+
+                // Quick hack to ensure that we will always show the correct time on the display
+                // If we just look at when the pump goes off, we  don't show correct timings
+                static uint32_t last_pumpMillis = 0;
+                const uint32_t pumpMillis = gaggiaIO.pumpMillis();
+
+                if (last_pumpMillis != pumpMillis) {
+                    last_pumpMillis = pumpMillis;
+                    if (pumpMillis < 999000) {
+                        dtostrf(pumpMillis / 1000.f, 1, 1, gaggia_ui_set_text_buffer(TIMER_LABEL));
+                        gaggia_ui_set_text(TIMER_LABEL, NULL);
+                    }
+                }
+
+                xSemaphoreGive(xSemaphore);
+            }
+        } else if (counter50TimesSec % maxSlots == slot50++) {
+            wifiManager.process();
+        } else if (counter50TimesSec % maxSlots == slot50++) {
+            if (shouldRestart != 0 && (currentMillis - shouldRestart >= 5000)) {
+                shouldRestart = 0;
+                ESP.restart();
+            }
+        } else {
+            maxSlots = slot50;
+        }
+    }
+
+    if (currentMillis - tick10Millis >= TICK10MS_PERIOD) {
+        tick10Millis = currentMillis;
+
+        // Gaggia IO has it's own timer
+        gaggiaIO.handle(currentMillis);
+
+        // Idially we should run this within 10ms orso...
+        if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
+            handleScriptContext();
+            xSemaphoreGive(xSemaphore);
+        }
+    }
+
+}
+
 
 void setup() {
     // Enable serial port
@@ -612,139 +703,19 @@ void setup() {
     setup_ui_events();
 
     xSemaphore = xSemaphoreCreateMutex();
+
+    powerSaveMonitor.trigger();
+    powerDownMonitor.trigger();
+
     xTaskCreatePinnedToCore(
-        displayUpdateTask,
+        displayTask,
         "displayUpdateTask",
         10000,      /* Stack size in words */
         NULL,
         0,
         NULL,
-        xPortGetCoreID() ? 0 : 1); /* Pick a core Arduino framework is not using */
-
-    effectPeriodStartMillis = millis();
-    powerSaveMonitor.trigger();
-    powerDownMonitor.trigger();
+        0);         /* Core ID */
+    
+    tick10Millis = millis();
+    tick50Millis = millis();
 }
-
-constexpr uint8_t NUMBER_OF_SLOTS = 10;
-uint8_t maxSlots = 255;
-void loop() {
-    const uint32_t currentMillis = millis();
-
-    // Gaggia IO has it's own timer
-    gaggiaIO.handle(currentMillis);
-
-    if (currentMillis - effectPeriodStartMillis >= EFFECT_PERIOD_CALLBACK) {
-
-        effectPeriodStartMillis += EFFECT_PERIOD_CALLBACK;
-        counter50TimesSec++;
-
-        if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
-            handleScriptContext();
-            xSemaphoreGive(xSemaphore);
-        }
-
-        controller -> handle(currentMillis);
-
-        // once a second publish status to mqtt (if there are changes)
-        if (counter50TimesSec % 50 == 0) {
-            publishStatusToMqtt();
-        }
-
-        // Maintenance stuff
-
-#if SHOW_FREE_HEAP==1
-
-        if (counter50TimesSec % 50 == 0) {
-            Serial.println(ESP.getFreeHeap());
-        }
-
-#endif
-
-        uint8_t slot50 = 0;
-
-        if (counter50TimesSec % maxSlots == slot50++) {
-            network_handle();
-        } else if (counter50TimesSec % maxSlots == slot50++) {
-            saveHardwareConfigHandler.handle();
-        } else if (counter50TimesSec % maxSlots == slot50++) {
-            saveGaggiaConfigHandler.handle();
-        } else if (counter50TimesSec % maxSlots == slot50++) {
-            powerSaveMonitor.handle();
-            powerDownMonitor.handle();
-        } else if (counter50TimesSec % maxSlots == slot50++) {
-            // Temporary untill we have a better spot
-
-            if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
-                dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(BREW_TEMP_LABEL));
-                dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(STEAM_TEMP_LABEL));
-                gaggia_ui_set_text(BREW_TEMP_LABEL, NULL);
-                gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
-
-                removeCounterLabel.handle();
-
-                if (gaggiaIO.pump()) {
-                    powerSaveMonitor.trigger();
-                    powerDownMonitor.trigger();
-
-                    const float pumpMillis = gaggiaIO.pumpMillis() / 1000.f;
-
-                    if (pumpMillis < 999.0f) {
-                        dtostrf(pumpMillis, 1, 1, gaggia_ui_set_text_buffer(TIMER_LABEL));
-                        gaggia_ui_set_text(TIMER_LABEL, NULL);
-                    }
-                }
-
-                xSemaphoreGive(xSemaphore);
-            }
-        } else if (counter50TimesSec % maxSlots == slot50++) {
-            wm.process();
-        } else if (counter50TimesSec % maxSlots == slot50++) {
-            if (shouldRestart != 0 && (currentMillis - shouldRestart >= 5000)) {
-                shouldRestart = 0;
-                ESP.restart();
-            }
-        } else {
-            maxSlots = slot50;
-        }
-    }
-}
-
-
-// //////////////////
-// //////////////////
-// #include <MAX31855.h>
-// /**
-//    How Many readings are taken to determine a mean temperature.
-//    The more values, the longer a calibration is performed,
-//    But the readings will be more accurate.
-// */
-// /**
-//    Delay time between a temperature readings
-//    From the temperature sensor (ms).
-// */
-// #define DELAY_TIME 20
-// MAX31855* thermocouple = NULL;
-
-// void setup_() {
-//     Serial.begin(115200);
-//     delay(1500);
-//     thermocouple = new MAX31855(PERI_PIN_SPI_CLK, STEAM_PIN_SPI_CS, PERI_PIN_SPI_MISO);
-//     thermocouple->begin();
-// }
-
-// void loop_() {
-//     thermocouple->read();
-//     Serial.print("Temperature:");
-//     Serial.print(thermocouple->getInternal());
-//     Serial.print(":");
-//     Serial.print(thermocouple->getTemperature());
-//     Serial.print(":");
-//     Serial.print(thermocouple->openCircuit());
-//     Serial.print(thermocouple->shortToGND());
-//     Serial.print(thermocouple->shortToVCC());
-//     Serial.print(thermocouple->genericError());
-//     Serial.print(thermocouple->noRead());
-//     Serial.println(thermocouple->noCommunication());
-//     delay(50);
-// }
