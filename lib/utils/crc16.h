@@ -1,7 +1,7 @@
 #ifndef CRC16_H_INCLUDED
 #define CRC16_H_INCLUDED
 
-#include <cstdint>
+#include <stdint.h>
 
 
 uint16_t crc16Update(uint16_t crc, uint8_t a) {

@@ -116,6 +116,7 @@ OneShot saveGaggiaConfigHandler{
     []() {
         saveConfig(CONFIG_FILENAME, gaggiaConfig);
         configModified = false;
+        saveGaggiaConfigHandler.start();
     },
     []() {
         return configModified;
@@ -129,6 +130,7 @@ OneShot saveHardwareConfigHandler{
     []() {
         saveConfig(CONTROLLER_CONFIG_FILENAME, controllerConfig);
         controllerConfigModified = false;
+        saveHardwareConfigHandler.start();
     },
     []() {
         return controllerConfigModified;
@@ -141,16 +143,16 @@ OneShot removeCounterLabel{
         gaggia_ui_set_visibility(TIMER_BOX, true);
     },
     []() {
-        gaggia_ui_set_visibility(TIMER_BOX, false);
+
+        if (gaggiaIO.pump()) {
+            removeCounterLabel.reset();
+        } else {
+            removeCounterLabel.start();
+            gaggia_ui_set_visibility(TIMER_BOX, false);
+        }
     },
     []() {
-        bool pump = gaggiaIO.pump();
-
-        if (pump) {
-            removeCounterLabel.hold();
-        }
-
-        return pump;
+        return gaggiaIO.pump();
     }
 };
 
@@ -183,7 +185,9 @@ OneShot powerDownMonitor {
 OneShot powerSaveMonitor {
     //TODO: Make this a configuration
     60 * 1000 * 15,
-    []() {},
+    []() {
+        gaggia_scripting_load("/startup.txt");
+    },
     []() {
         gaggia_scripting_load("/powersave.txt");
     },
@@ -328,8 +332,9 @@ void publishStatusToMqtt() {
     uint16_t thisCrc = crc16((uint8_t*)buffer, std::strlen(buffer));
 
     if (thisCrc != lastMeasurementCRC) {
-        network_publishToMQTT("status", buffer);
-        lastMeasurementCRC = thisCrc;
+        if (network_publishToMQTT("status", buffer, true)) {
+            lastMeasurementCRC = thisCrc;
+        }
     }
 }
 
@@ -555,13 +560,11 @@ void setDefaultConfigurations() {
     controllerConfigModified |= controllerConfig.putNotContains("mqttUsername", PV(""));
     controllerConfigModified |= controllerConfig.putNotContains("mqttPassword", PV(""));
     controllerConfigModified |= controllerConfig.putNotContains("mqttPort", PV(1883));
-    controllerConfigModified |= controllerConfig.putNotContains("statusJson", PV(true));
+    controllerConfigModified |= controllerConfig.putNotContains("pauseForOTA", PV(true));
 
     controllerConfig.put("mqttClientID", PV(mqttClientID));
     controllerConfig.put("mqttBaseTopic", PV(mqttBaseTopic));
     controllerConfig.put("mqttLastWillTopic", PV(mqttLastWillTopic));
-
-
     //    controllerConfig.put("standbyTime", PV(15*60));
 
     // gaggiaConfig
@@ -614,12 +617,12 @@ void loop() {
         if (counter50TimesSec % maxSlots == slot50++) {
             network_handle();
         } else if (counter50TimesSec % maxSlots == slot50++) {
-            saveHardwareConfigHandler.handle();
+            saveHardwareConfigHandler.handle(currentMillis);
         } else if (counter50TimesSec % maxSlots == slot50++) {
-            saveGaggiaConfigHandler.handle();
+            saveGaggiaConfigHandler.handle(currentMillis);
         } else if (counter50TimesSec % maxSlots == slot50++) {
-            powerSaveMonitor.handle();
-            powerDownMonitor.handle();
+            powerSaveMonitor.handle(currentMillis);
+            powerDownMonitor.handle(currentMillis);
         } else if (counter50TimesSec % maxSlots == slot50++) {
 
             // Temporary untill we have a better spot
@@ -629,11 +632,11 @@ void loop() {
                 gaggia_ui_set_text(BREW_TEMP_LABEL, NULL);
                 gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
 
-                removeCounterLabel.handle();
+                removeCounterLabel.handle(currentMillis);
 
                 if (gaggiaIO.pump()) {
-                    powerSaveMonitor.trigger();
-                    powerDownMonitor.trigger();
+                    powerSaveMonitor.hold();
+                    powerDownMonitor.hold();
                 }
 
                 // Quick hack to ensure that we will always show the correct time on the display

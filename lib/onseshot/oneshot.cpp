@@ -17,45 +17,57 @@ OneShot::OneShot(
     m_endCallback{p_endCallback},
     m_modified{p_modified},
     m_lastStatus{false},
-    m_oneShotStatus{NOP},
-    m_startTime{millis()} {
+    m_oneShotStatus{WAIT_TRIGGER},
+    m_startTime{0},
+    m_lastHandleTime{0} {
 }
 
-void OneShot::handle() {
+void OneShot::handle(uint32_t currentMillis) {
     const bool status = m_modified();
-
-    if (status && m_lastStatus == false && m_oneShotStatus == NOP) {
-        trigger();
-    }
-
-    m_lastStatus = status;
-
-    const uint32_t currentMillis = millis();
-
-    if (m_oneShotStatus == END || (m_oneShotStatus == START && (currentMillis - m_startTime >= m_delayTimeMS))) {
-        flush();
+    m_lastHandleTime = currentMillis;
+    if (status && m_oneShotStatus == WAIT_TRIGGER) {
+        triggerStart(currentMillis);
+    } else if (m_oneShotStatus == STARTED && (currentMillis - m_startTime >= m_delayTimeMS)) {
+        triggerEnd();
     }
 }
 
-void OneShot::flush() {
-    m_endCallback();
-    m_oneShotStatus = NOP;
-}
-
-bool OneShot::lastStatus() const {
-    return m_lastStatus;
-}
-
-void OneShot::trigger() {
-    m_oneShotStatus = START;
-    m_startTime = millis();
+void OneShot::triggerStart(uint32_t currentMillis) {
+    m_oneShotStatus = STARTED;
+    m_startTime = currentMillis;
     m_startCallback();
 }
 
-void OneShot::hold() {
-    m_startTime = millis();
+void OneShot::triggerEnd() {
+    m_oneShotStatus = ENDED;
+    m_endCallback();
 }
 
 void OneShot::reset() {
-    m_oneShotStatus = NOP;
+    if (m_oneShotStatus == ENDED) {
+        m_oneShotStatus = STARTED;
+        m_startTime = m_lastHandleTime;
+    }
+}
+
+void OneShot::start() {
+    if (m_oneShotStatus == ENDED) {
+        m_oneShotStatus = WAIT_TRIGGER;
+    }
+}
+
+void OneShot::trigger() {
+    if (m_oneShotStatus == WAIT_TRIGGER) {
+        triggerStart(m_lastHandleTime);
+    }
+}
+
+void OneShot::stop() {
+    m_oneShotStatus = ENDED;
+}
+
+void OneShot::hold() {
+    if (m_oneShotStatus == STARTED) {
+        m_startTime = m_lastHandleTime;
+    }
 }
