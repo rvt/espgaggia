@@ -143,15 +143,13 @@ OneShot removeCounterLabel{
         gaggia_ui_set_visibility(TIMER_BOX, true);
     },
     []() {
-
-        if (gaggiaIO.pump()) {
-            removeCounterLabel.reset();
-        } else {
-            removeCounterLabel.start();
-            gaggia_ui_set_visibility(TIMER_BOX, false);
-        }
+        removeCounterLabel.start();
+        gaggia_ui_set_visibility(TIMER_BOX, false);
     },
     []() {
+        if (gaggiaIO.pump()) {
+            removeCounterLabel.hold();
+        }
         return gaggiaIO.pump();
     }
 };
@@ -186,7 +184,7 @@ OneShot powerSaveMonitor {
     //TODO: Make this a configuration
     60 * 1000 * 15,
     []() {
-        gaggia_scripting_load("/startup.txt");
+//        gaggia_scripting_load("/startup.txt");
     },
     []() {
         gaggia_scripting_load("/powersave.txt");
@@ -518,6 +516,8 @@ void setup_ui_events() {
     });
 
     gaggia_ui_add_event_cb(GENERIC_UI_INTERACTION, [](enum ui_element_types label, enum ui_event event) {
+        powerSaveMonitor.start();
+        powerDownMonitor.start();
         powerSaveMonitor.trigger();
         powerDownMonitor.trigger();
     });

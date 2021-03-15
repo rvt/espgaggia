@@ -11,8 +11,9 @@ MAX31855sensor::MAX31855sensor(MAX31855* p_MAX31855) :
 
 void MAX31855sensor::handle() {
     uint8_t fault = m_MAX31855->read();
-    float temperature = m_MAX31855->getInternal();
-    //    float temperature = m_MAX31855->getTemperature();
+    float measured = m_MAX31855->getTemperature();
+    //float internal = m_MAX31855->getInternal();
+
 
     if (fault != 0) {
         //Serial.print (thermocouple->openCircuit());
@@ -22,9 +23,10 @@ void MAX31855sensor::handle() {
         //Serial.print (thermocouple->noRead());
         //  Serial.println (thermocouple->noCommunication());
         return;
+    } else {
+        m_lastTemp = m_lastTemp + (measured - m_lastTemp) * 0.1f;
     }
 
-    m_lastTemp = m_lastTemp + (temperature - m_lastTemp) * 0.02f;
 }
 
 float MAX31855sensor::get() const {
