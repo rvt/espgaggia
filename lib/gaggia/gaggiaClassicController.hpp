@@ -13,7 +13,7 @@
 #include <algorithm>
 
 constexpr uint8_t UPDATES_PER_SECOND = 1; // numnber of fuzzy calculations per second
-constexpr uint8_t TEMPERATUR_DIFFERENCE_OVER_SEC = 5;
+constexpr uint8_t TEMPERATUR_DIFFERENCE_OVER_SEC = 2;
 
 struct GaggiaClassicControllerConfig {
     std::array<float, 4> boiler_lower  = std::array<float, 4> { {-5, -2, -2, 1} };
@@ -25,9 +25,9 @@ struct GaggiaClassicControllerConfig {
     std::array<float, 4> temp_error_hight = std::array<float, 4> { {5, 20, 100, 100} };
 
     // Change per 1 seconds
-    std::array<float, 4> temp_change_slow = std::array<float, 4> { {-0.1, 0, 0, -0.1} };
-    std::array<float, 4> temp_change_medium = std::array<float, 4> { {0, 1, 1, 2} };
-    std::array<float, 4> temp_change_fast = std::array<float, 4> { {1, 5, 10, 10} };
+    std::array<float, 4> temp_change_slow = std::array<float, 4> { {-0.25, 0, 0, -0.25} };
+    std::array<float, 4> temp_change_medium = std::array<float, 4> { {0, 0.5, 0.5, 1} };
+    std::array<float, 4> temp_change_fast = std::array<float, 4> { {0.5, 2, 10, 10} };
 };
 
 // TODO: need to be renamed to something like GaggiaBoilerController

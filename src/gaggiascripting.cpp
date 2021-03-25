@@ -21,14 +21,14 @@ extern Properties gaggiaConfig;
 
 static GaggiaIO* scripting_gaggiaIO;
 static GaggiaScriptContext* scriptContext{nullptr};
-static CachedScriptRunner<GaggiaScriptContext>* scriptRunner = nullptr;
-static char scriptContextFileToLoad[32]; // See note for handleScriptContext()
+static ScriptRunner<GaggiaScriptContext>* scriptRunner = nullptr;
+static char scriptContextFileToLoad[32] = ""; // See note for handleScriptContext()
 constexpr uint8_t SCRIPT_LABEL_SIZE_MAX = 16;
 constexpr uint8_t SCRIPT_LINE_SIZE_MAX = 64;
 
 using namespace rvt::scriptrunner;
 
-bool OptionalJump(GaggiaScriptContext& context, const char* value, const uint8_t jmpPos) {
+bool JumpOrStay(GaggiaScriptContext& context, const char* value, const uint8_t jmpPos) {
     char* jmpLocation = nullptr;
     OptParser::get<SCRIPT_LINE_SIZE_MAX>(value, ',', [&](const OptValue & parsed) {
         if (parsed.pos() == jmpPos) {
@@ -44,8 +44,8 @@ bool OptionalJump(GaggiaScriptContext& context, const char* value, const uint8_t
     return false;
 }
 
-bool getBoolValue(const char* value, uint8_t pos) {
-    bool rValue = false;
+bool getBoolValue(const char* value, uint8_t pos, bool defaultValue = false) {
+    bool rValue = defaultValue;
     OptParser::get<SCRIPT_LINE_SIZE_MAX>(value, ',', [&](const OptValue & parsed) {
         if (parsed.pos() == pos) {
             rValue = (bool)parsed;
@@ -115,12 +115,12 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
 #if defined (DONT_WAIT_FOR_TEMPS)
         return true;
 #else
-        return scripting_gaggiaIO->brewTemperature()->get() >= context.m_temperature ;
+        return scripting_gaggiaIO->brewTemperature()->get() >= context.m_temperature;
 #endif
     }
                                                         });
     commands.push_back(new Command<GaggiaScriptContext> {"steamTemp", [](const char* value, GaggiaScriptContext & context) {
-        context.m_brewMode = true;
+        context.m_brewMode = false;
         float tempValue;
 
         if (gaggiaConfig.contains(value)) {
@@ -145,7 +145,6 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
             switch (parsed.pos()) {
                 case 0:
                     gaggia_ui_set_text(PROCESS_MESSAGE_LABEL, (char*)parsed);
-                    //                    gaggia_ui_set_text(PROCESS_MESSAGE_TITLE, "");
                     break;
 
                 case 1:
@@ -160,7 +159,8 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
                                                         });
 
     commands.push_back(new Command<GaggiaScriptContext> {"MessageOff", [](const char* value, GaggiaScriptContext & context) {
-        Serial.println("Message Off");
+        Serial.print("Message Off : ");
+        Serial.println(value);
         gaggia_ui_set_visibility(PROCESS_MESSAGE_CONTAINER, false);
         return true;
     }
@@ -171,7 +171,9 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
     }
                                                         });
     commands.push_back(new Command<GaggiaScriptContext> {"load", [&](const char* value, GaggiaScriptContext & context) {
-        strncpy(scriptContextFileToLoad, (char*)value, sizeof(scriptContextFileToLoad));
+        Serial.print("Load : ");
+        Serial.println(value);
+        gaggia_scripting_load(value);
         return false;
     }
                                                         });
@@ -180,7 +182,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
         if (scripting_gaggiaIO->steamButton()->current() == getBoolValue(value, 0)) {
             return true;
         } else {
-            return OptionalJump(context, value, 1);
+            return JumpOrStay(context, value, 1);
         }
     }
                                                         });
@@ -191,7 +193,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
         if (scripting_gaggiaIO->brewButton()->current() == getBoolValue(value, 0)) {
             return true;
         } else {
-            return OptionalJump(context, value, 1);
+            return JumpOrStay(context, value, 1);
         }
     }
                                                         });
@@ -202,12 +204,12 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
         bool buttonValue = getBoolValue(value, 0);
 
         if (scripting_gaggiaIO->brewButton()->current() == buttonValue) {
-            return OptionalJump(context, value, 1);
+            return JumpOrStay(context, value, 1);
         } else if (scripting_gaggiaIO->steamButton()->current() == buttonValue) {
-            return OptionalJump(context, value, 2);
+            return JumpOrStay(context, value, 2);
         }
 
-        return OptionalJump(context, value, 3);
+        return getBoolValue(value, 3, false);
     }
                                                         });
 
@@ -224,33 +226,53 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
         return false;
     }
                                                         });
-    scriptRunner = new CachedScriptRunner<GaggiaScriptContext> {commands};
+    scriptRunner = new ScriptRunner<GaggiaScriptContext> {commands};
 }
 
-void gaggia_load_script() {
+bool gaggia_load_script() {
     char buffer[1024];
-    uint16_t pos = 0;
 
-    if (FileSystemFS.exists(scriptContextFileToLoad)) {
-        //file exists, reading and loading
-        File configFile = FileSystemFS.open(scriptContextFileToLoad, "r");
+    if (strlen(scriptContextFileToLoad) != 0) {
+        if (FileSystemFSBegin()) {
+            if (FileSystemFS.exists(scriptContextFileToLoad)) {
 
-        while (configFile.available()) {
-            buffer[pos++] = char(configFile.read());
+                //file exists, reading and loading
+                Serial.print(F("Opening : ")); Serial.print (scriptContextFileToLoad);
+                File configFile = FileSystemFS.open(scriptContextFileToLoad, "r");
+
+                if (configFile) {
+                    uint16_t pos = 0;
+                    while (configFile.available()) {
+                        // TODO: Uptimise this with read(uint8_t* buf, size_t size)
+                        buffer[pos++] = char(configFile.read());
+                    }
+                    buffer[pos++] = 0;
+                    configFile.close();
+                    Serial.println(F(" Loaded."));
+                    GaggiaScriptContext* oldContext = scriptContext;
+
+                    if (oldContext != nullptr) {
+                        scriptContext = new GaggiaScriptContext{scripting_gaggiaIO, buffer, oldContext};
+                    } else {
+                        scriptContext = new GaggiaScriptContext{scripting_gaggiaIO, buffer, false, false, 20, true};
+                    }
+
+                    delete oldContext;
+                    strcpy(scriptContextFileToLoad, "");
+                } else {
+                    Serial.print(F(" failed."));
+                }
+            } else {
+                Serial.print(F("File "));
+                Serial.print(scriptContextFileToLoad);
+                Serial.println(F(" not found."));
+                strcpy(scriptContextFileToLoad, "");
+                return false;
+            }
         }
-
-        buffer[pos++] = 0;
-        configFile.close();
-        Serial.print(F("Loaded : "));
-        Serial.println(scriptContextFileToLoad);
-        delete scriptContext;
-        scriptContext = new GaggiaScriptContext{scripting_gaggiaIO, buffer};
-    } else {
-        Serial.print(F("File not found: "));
-        Serial.println(scriptContextFileToLoad);
     }
 
-    scriptContextFileToLoad[0] = '\0';
+    return true;
 }
 
 void gaggia_scripting_load(const char* value) {
@@ -258,9 +280,11 @@ void gaggia_scripting_load(const char* value) {
 }
 
 int8_t gaggia_scripting_handle() {
-    if (strlen(scriptContextFileToLoad) != 0) {
-        gaggia_load_script();
-    } else if (scriptContext == nullptr) {
+    if (!gaggia_load_script()) {
+        return -1;
+    }
+
+    if (scriptContext == nullptr) {
         return -1;
     }
 

@@ -1,4 +1,7 @@
-pump=0;valve=0;
+loadBug=1;
+Message=,Quick Steam;
+pump=0;
+valve=0;
 BrewButton=1,brewIsOff;
 Message=Turn off brew;
 BrewButton=0;
@@ -10,3 +13,5 @@ Message=Waiting for pressure;
 steamTemp=defaultSteamTemp;
 Message=Steam is ready;
 SteamButton=0;
+setTemp=75;
+load=/purge.txt;

@@ -32,10 +32,6 @@ public:
      * Increase the speed of the fan with a specific value
      */
     void increasePercent(const float p_power) {
-        if (p_power > 0 && m_power < 1.0) {
-            m_power = 1.0;
-        }
-
         power(m_power + m_power / 100 * p_power);
     }
 

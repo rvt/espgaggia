@@ -36,14 +36,6 @@ public:
      */
     HWButton(uint8_t p_pin, bool p_invert, int16_t p_alpha);
 
-    /**
-     * Initialise the button and enable the pin modus
-     * It sets the pin mode to INPUT_PULLUP but for the esp8266 that didn´t work,
-     * so still use a external pullup.
-     */
-    void init() {
-        pinMode(m_pin, INPUT_PULLUP);
-    }
     virtual bool raw() {
         return digitalRead(m_pin);
     };

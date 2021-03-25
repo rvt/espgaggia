@@ -1,7 +1,9 @@
 loadBug=1;
-Message=Power Down,;
+Message=Stopping,;
 pump=0;
 valve=0;
 brewMode=1;
-setTemp=10;
+setTemp=75;
+wait=2500;
+MessageOff=1;
 load=/quickStart.txt;

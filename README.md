@@ -7,9 +7,9 @@ Features
 * Control temperature of both stream and brew and set temperature with a touch display (Fuzzy Logic)
 * pre-infuse your coffee
 * Make recipes using a simple scripting language with menu's controle brew/preinfuse timings and temperatures
-* Standby + Remote turn on (Using MQTT)
+* Standby + Remote turn on (Using MQTT and SIRI)
 * Deep sleep option (work in progress)
-* Stand by option with a lower temperature (work in progress)
+* Stand by and power down options with a lower temperature to conserve energy.
 
 
 Main screen:
@@ -25,10 +25,6 @@ Settings Screen:
 
 ![images](images/screen3.jpg "Screen 1")
 
-# Hardware Tests
-
-* Tested with ESP 32 and ILI9341 touch display
-
 # Word Of Warning
 
 ### Please read this carefull!
@@ -37,7 +33,7 @@ If you are going to build this project you have to understand you will be workin
 
 # Compilation
 
-``` bash
+```bash
 rvt$ pio run
 Processing gaggia (platform: espressif32; framework: arduino; board: esp32dev)
 -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -70,13 +66,29 @@ By default it will have some scripts to do some of it's work. Check the data dir
 
 # MQTT Messages
 
-Will be written soon
+Messages can be send as simple string (properties format) or as JSON.
+
+
+```json
+{
+    "tempBrew":49.50,
+    "tempSteam":50.00,
+    "setPoint":10.00,
+    "boiler":0.00,
+    "brewBut":0,
+    "steamBut":0,
+    "pump":0,
+    "valve":0
+}
+```
 
 # Scripting
 
-Will be written soon and how to add your own menu entries
+See data directory for examples (this is still work in progress, but it works right now well enough for me to beabke to publish, however they are subject to change.
 
 # Hardware and Connection
+
+Note: For latest component set check the KiCAD schematic.
 
 * 1x ESP32 
 * 2x Zero Crossing SSR 10Amp (DC-AC) https://nl.aliexpress.com/item/32706812752.html?spm=a2g0s.9042311.0.0.46b54c4dXPbjTF
@@ -94,13 +106,50 @@ note: For the MAX31855K make sure you get the 'fancy' one, that is proper dialec
 For pins in `platformio.ini`
 
 _WARNING schematic needs further verification_
+See KIA Print for latest version.
 
-![images](images/schematic.jpg "Screen 1")
+![images](images/schematic.jpg "Schematic")
+![images](images/print.jpg "PCB")
 
-# Hardware Tested
+# Hardware and functions Tested
 
 - [x] TFT/Touch display (ILI9341)
 - [x] Temperature sensors
-- [ ] Buttons
-- [ ] SSR
-- [x] Temperature control (on other project verified)
+- [x] Buttons
+- [x] SSR
+- [x] Temperature control
+- [x] Scripting
+- [x] Power save and powerdown
+
+
+# Homebridge
+
+JSON COnfiguration for homebrige so you can turn on and off the machine with SIRI.
+`ID OF ESP32` is in the form of `XXXXXXXX`. Use a tool like http://mqtt-explorer.com to see the messages
+
+```json
+ {
+            "accessory": "mqttthing",
+            "type": "outlet",
+            "name": "Gaggia",
+            "url": "<MQTT URL>",
+            "username": "<mqtt username>",
+            "password": "<mqtt password>",
+            "integerValue": true,
+            "confirmationPeriodms": 250,
+            "onlineValue": "online",
+            "offlineValue": "offline",
+            "retryLimit": 2,
+            "topics": {
+                "getOnline": "gaggia/<ID OF ESP32>/lastwill",
+                "getOn": {
+                    "topic": "gaggia/<ID OF ESP32>/status",
+                    "apply": "var m=JSON.parse(message); return m.setPoint>40;"
+                },
+                "setOn": {
+                    "topic": "gaggia/<ID OF ESP32>/config",
+                    "apply": "return message==1?'on=1':'on=0';"
+                }
+            }
+        }
+```

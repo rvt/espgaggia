@@ -42,6 +42,8 @@ static StateMachine* bootSequence;;
 static WiFiClient network_wifiClient;
 static PubSubClient mqttClient(network_wifiClient);
 
+static OTA_CALLBACK_SIGNATURE otaCallback = nullptr;
+
 static bool network_hasMqttConfigured = false;
 
 /**
@@ -51,7 +53,9 @@ void startOTA() {
     // Start OTA
     ArduinoOTA.setHostname(controllerConfig.get("mqttClientID"));
     ArduinoOTA.onStart([]() {
-        Serial.println(F("OTA Beginning"));
+        if (otaCallback != nullptr) {
+            otaCallback();
+        }
     });
     ArduinoOTA.onError([](ota_error_t error) {
         Serial.print("ArduinoOTA Error[");
@@ -221,6 +225,7 @@ void network_handle() {
 void wait_mqtt_state() {
     network_wifiClient.flush();
     uint8_t loopCounter = 0;
+
     while (mqttClient.state() != -1 && loopCounter < 250) {
         delay(10);
         loopCounter++;
@@ -240,11 +245,15 @@ void network_shutdown() {
 
 void network_flush() {
     network_wifiClient.flush();
-    #if defined(ESP8266)
-        mqttClient.flush();
-    #endif
+#if defined(ESP8266)
+    mqttClient.flush();
+#endif
 }
 
 bool network_is_connected() {
     return mqttClient.connected() && WiFi.status() == WL_CONNECTED;
+}
+
+void network_ota_begin_callback(OTA_CALLBACK_SIGNATURE signature) {
+    otaCallback = signature;
 }

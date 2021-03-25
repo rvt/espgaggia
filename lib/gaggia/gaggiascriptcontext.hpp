@@ -19,13 +19,31 @@ public:
 
     GaggiaScriptContext(
         GaggiaIO* p_gaggiaIO,
-        const char* script) :
+        const char* script,
+        bool valve,
+        bool pump,
+        float temperature,
+        bool brewMode
+    ) :
         PlainTextContext512{script},
         m_gaggiaIO(p_gaggiaIO),
-        m_valve(false),
-        m_pump(false),
-        m_temperature(20.0f),
-        m_brewMode(true) {
+        m_valve(pump),
+        m_pump(pump),
+        m_temperature(temperature),
+        m_brewMode(brewMode) {
 
+    }
+
+    GaggiaScriptContext(
+        GaggiaIO* p_gaggiaIO,
+        const char* script,
+        GaggiaScriptContext* copy
+    ) :
+        PlainTextContext512{script},
+        m_gaggiaIO(p_gaggiaIO),
+        m_valve(copy->m_valve),
+        m_pump(copy->m_pump),
+        m_temperature(copy->m_temperature),
+        m_brewMode(copy->m_brewMode) {
     }
 };

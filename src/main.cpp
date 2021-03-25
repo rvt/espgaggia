@@ -150,6 +150,7 @@ OneShot removeCounterLabel{
         if (gaggiaIO.pump()) {
             removeCounterLabel.hold();
         }
+
         return gaggiaIO.pump();
     }
 };
@@ -173,7 +174,7 @@ OneShot powerDownMonitor {
     60 * 1000 * 45,
     []() {},
     []() {
-        gaggia_scripting_load("/powerdown.txt");
+        gaggia_scripting_load(POWERDOWN_SCRIPT);
     },
     []() {
         return false;
@@ -184,10 +185,9 @@ OneShot powerSaveMonitor {
     //TODO: Make this a configuration
     60 * 1000 * 15,
     []() {
-//        gaggia_scripting_load("/startup.txt");
     },
     []() {
-        gaggia_scripting_load("/powersave.txt");
+        gaggia_scripting_load(POWERSAVE_SCRIPT);
     },
     []() {
         return false;
@@ -200,19 +200,20 @@ bool loadConfig(const char* filename, Properties& properties) {
     if (FileSystemFSBegin()) {
         if (FileSystemFS.exists(filename)) {
             //file exists, reading and loading
+            Serial.print(F("Opening : ")); Serial.print (filename);
             File configFile = FileSystemFS.open(filename, "r");
 
             if (configFile) {
-                Serial.print(F("Loading config : "));
+                Serial.print(F(" loaded."));
                 Serial.println(filename);
                 deserializeProperties<LINE_BUFFER_SIZE>(configFile, properties);
                 serializeProperties<LINE_BUFFER_SIZE>(Serial, properties);
+                configFile.close();
             }
 
-            configFile.close();
         } else {
-            Serial.print(F("File not found: "));
-            Serial.println(filename);
+               Serial.print(F(" failed."));
+             Serial.println(filename);
         }
 
         // FileSystemFS.end();
@@ -225,27 +226,26 @@ bool loadConfig(const char* filename, Properties& properties) {
 
 
 /**
- * Store custom oarameter configuration in FileSystemFS
+ * Store custom parameter configuration in FileSystemFS
  */
 bool saveConfig(const char* filename, Properties& properties) {
     bool ret = false;
 
     if (FileSystemFSBegin()) {
         FileSystemFS.remove(filename);
+        Serial.print(F("Opening : ")); Serial.print (filename);
         File configFile = FileSystemFS.open(filename, "w");
 
         if (configFile) {
-            Serial.print(F("Saving config : "));
-            Serial.println(filename);
+            Serial.print(F(" Saved."));
             serializeProperties<LINE_BUFFER_SIZE>(configFile, properties);
             serializeProperties<LINE_BUFFER_SIZE>(Serial, properties, false);
             ret = true;
+            configFile.close();
         } else {
-            Serial.print(F("Failed to write file"));
-            Serial.println(filename);
+            Serial.print(F(" Failed."));
         }
 
-        configFile.close();
     }
 
     return ret;
@@ -267,9 +267,11 @@ void handleScriptContext() {
         gaggia_ui_set_led(VALVE_STATUS_SSR, gaggia_scripting_context()->m_valve);
         gaggia_ui_set_led(PUMP_STATUS_SSR, gaggia_scripting_context()->m_pump);
     }
+
 #endif
 
     int8_t handle = gaggia_scripting_handle();
+
     switch (handle) {
         case 0:
             Serial.println("Script ended");
@@ -277,7 +279,7 @@ void handleScriptContext() {
             gaggiaIO.valve(false);
             controller->brewMode(true);
             controller->setPoint(gaggiaConfig.get("defaultBrewTemp"));
-            gaggia_scripting_load(QUICKSTART_SCRIPT);
+            gaggia_scripting_load(STARTUP_SCRIPT);
             break;
 
         case 1:
@@ -285,9 +287,19 @@ void handleScriptContext() {
             gaggiaIO.valve(gaggia_scripting_context()->m_valve);
             controller->brewMode(gaggia_scripting_context()->m_brewMode);
             controller->setPoint(gaggia_scripting_context()->m_temperature);
+            break;
     }
+
+#if defined (GUI_BUTTONS)
+    uiBrewButton = gaggiaIO.brewButton()->current();
+    uiSteamButton = gaggiaIO.steamButton()->current();
+#endif
 }
 
+
+float round05(float input) {
+    return (floor((input * 2) + 0.5f) / 2.0f);
+}
 ///////////////////////////////////////////////////////////////////////////
 //  MQTT
 ///////////////////////////////////////////////////////////////////////////
@@ -305,24 +317,30 @@ void publishStatusToMqtt() {
     char* buffer;
 
     // Can we do better than this?
+    constexpr uint8_t numitems = 8;
+
     if (controllerConfig.get("statusJson")) {
-        static char f[] = "{\"tb\":%.2f,\"ts\":%.2f,\"bo\":%.2f}";
-        static char b[sizeof(f) + 3 * 8 + 10]; // 2 bytes per extra item + 10 extra
+        static char f[] = "{\"tempBrew\":%.2f,\"tempSteam\":%.2f,\"setPoint\":%.2f,\"boiler\":%.2f,\"brewBut\":%d,\"steamBut\":%d,\"pump\":%d,\"valve\":%d}";
+        static char b[sizeof(f) + numitems * 3]; // 3 bytes per extra item + 10 extra
         format = f;
         buffer = b;
     } else {
-        static char f[] = "tb=%.2f ts=%.2f bo=%.2f";
-        static char b[sizeof(f) + 3 * 8 + 10]; // 2 bytes per extra item + 10 extra
+        static char f[] = "tempBrew=%.2f tempSteam=%.2f setPoint=%.2f boiler=%.2f brewBut=%d steamBut=%d pump=%d valve=%d";
+        static char b[sizeof(f) + numitems * 3]; // 3 bytes per extra item + 10 extra
         format = f;
         buffer = b;
     }
 
-
     sprintf(buffer,
             format,
-            gaggiaIO.brewTemperature()->get(),
-            gaggiaIO.steamTemperature()->get(),
-            gaggiaIO.heatElement()->power()
+            round05(gaggiaIO.brewTemperature()->get()),
+            round05(gaggiaIO.steamTemperature()->get()),
+            round05(controller->setPoint()),
+            round05(gaggiaIO.heatElement()->power()),
+            gaggiaIO.brewButton()->current(),
+            gaggiaIO.steamButton()->current(),
+            gaggiaIO.pump(),
+            gaggiaIO.valve()
            );
 
 
@@ -358,7 +376,7 @@ void handleCmd(const char* topic, const char* p_payload) {
         controllerConfigModified = true;
     }
 
-    // List all files in base directory
+    // List all files in base directory over Serial
     if (strstr(topicPos, "/listFiles") != nullptr) {
         File root = FileSystemFS.open("/");
         File file = root.openNextFile();
@@ -374,6 +392,22 @@ void handleCmd(const char* topic, const char* p_payload) {
         if (strcmp(payloadBuffer, "1") == 0) {
             shouldRestart = millis();
         }
+    }
+
+    if (strstr(topicPos, "/config") != nullptr) {
+        OptParser::get(payloadBuffer, [&](OptValue v) {
+            if (strcmp(v.key(), "on") == 0) {
+                if ((bool)v) {
+                    gaggia_scripting_load(STARTUP_SCRIPT);
+                    powerSaveMonitor.reset();
+                    powerDownMonitor.reset();
+                } else {
+                    gaggia_scripting_load(POWERDOWN_SCRIPT);
+                    powerSaveMonitor.stop();
+                    powerDownMonitor.stop();
+                }
+            }
+        });
     }
 }
 
@@ -395,6 +429,23 @@ void setupMQTTCallback() {
         handleCmd(p_topic, mqttReceiveBuffer);
     });
 
+}
+
+void turnOffHardware() {
+    // Turn off boiler, pump and vale
+    pinMode(BOILER_PIN, OUTPUT);
+    pinMode(PUMP_PIN, OUTPUT);
+    pinMode(VALVE_PIN, OUTPUT);
+    digitalWrite(BOILER_PIN, true);
+    digitalWrite(PUMP_PIN, true);
+    digitalWrite(VALVE_PIN, true);
+    gaggia_scripting_load(STARTUP_SCRIPT);
+}
+
+void setupNetworkCallbacl() {
+    network_ota_begin_callback([]() {
+        turnOffHardware();
+    });
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -467,12 +518,15 @@ void setupWifiManager() {
 ///////////////////////////////////////////////////////////////////////////
 void setup_ui_events() {
 #if defined (GUI_IO)
+
+#if defined (GUI_BUTTONS)
     gaggia_ui_add_event_cb(STEAM_TEMP_OBJ, [](enum ui_element_types label, enum ui_event event) {
         uiSteamButton = !uiSteamButton;
     });
     gaggia_ui_add_event_cb(BREW_TEMP_OBJ, [](enum ui_element_types label, enum ui_event event) {
         uiBrewButton = !uiBrewButton;
     });
+#endif
 #endif
     // Spinners
     gaggia_ui_spin_set_range(BREWTEMP_SPIN, BREW_TEMP_MIN, BREW_TEMP_MAX);
@@ -512,7 +566,7 @@ void setup_ui_events() {
 
     // Events
     gaggia_ui_add_event_cb(STOP_BUTTON, [](enum ui_element_types label, enum ui_event event) {
-        gaggia_scripting_load(STARTUP_SCRIPT);
+        gaggia_scripting_load(STOP_SCRIPT);
     });
 
     gaggia_ui_add_event_cb(GENERIC_UI_INTERACTION, [](enum ui_element_types label, enum ui_event event) {
@@ -608,12 +662,15 @@ void loop() {
 
         // Maintenance stuff
 #if SHOW_FREE_HEAP==1
+
         if (counter50TimesSec % 50 == 0) {
             Serial.println(ESP.getFreeHeap());
         }
+
 #endif
 
         uint8_t slot50 = 0;
+
         if (counter50TimesSec % maxSlots == slot50++) {
             network_handle();
         } else if (counter50TimesSec % maxSlots == slot50++) {
@@ -646,6 +703,7 @@ void loop() {
 
                 if (last_pumpMillis != pumpMillis) {
                     last_pumpMillis = pumpMillis;
+
                     if (pumpMillis < 999000) {
                         dtostrf(pumpMillis / 1000.f, 1, 1, gaggia_ui_set_text_buffer(TIMER_LABEL));
                         gaggia_ui_set_text(TIMER_LABEL, NULL);
@@ -683,12 +741,16 @@ void loop() {
 
 
 void setup() {
+    /* Pins'a go low quickly, but we need them to be high so the SSR's dont turn on.
+    So we do not want to wait for delays and other startup items */
+    turnOffHardware();
+
+    pinMode(CONFIG_LV_DISP_SPI_CS, OUTPUT);    // No CSS for display, so we keep it low all the time (saves some cycles)
+    digitalWrite(CONFIG_LV_DISP_SPI_CS, LOW);
+
     // Enable serial port
     Serial.begin(115200);
     delay(500);
-
-    pinMode(CONFIG_LV_DISP_SPI_CS, OUTPUT);    // sets the digital pin 13 as output
-    digitalWrite(CONFIG_LV_DISP_SPI_CS, LOW);  // sets the digital pin 13 off
 
     // load configurations
     loadConfig(CONTROLLER_CONFIG_FILENAME, controllerConfig);
@@ -718,7 +780,7 @@ void setup() {
         0,
         NULL,
         0);         /* Core ID */
-    
+
     tick10Millis = millis();
     tick50Millis = millis();
 }

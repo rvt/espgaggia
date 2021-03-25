@@ -5,7 +5,7 @@
 constexpr uint8_t STEAM_BUTTON_PIN = CONFIG_STEAM_BUTTON_PIN;    //  IN
 constexpr uint8_t BREW_BUTTON_PIN = CONFIG_BREW_BUTTON_PIN;    //  IN
 
-constexpr uint8_t BOILER_PIN = CONFIG_SSR_PUMP_PIN;    //  OUT
+constexpr uint8_t BOILER_PIN = CONFIG_SSR_BOILER_PIN;    //  OUT
 constexpr uint8_t VALVE_PIN = CONFIG_SSR_VALVE_PIN;    //  OUT
 constexpr uint8_t PUMP_PIN = CONFIG_SSR_PUMP_PIN;    //  OUT
 
@@ -22,6 +22,10 @@ constexpr uint8_t PERI_PIN_SPI_CLK = CONFIG_PERI_PIN_SPI_CLK;
 
 #define STARTUP_SCRIPT "/startup.txt"
 #define QUICKSTART_SCRIPT "/quickStart.txt"
+#define STOP_SCRIPT "/stop.txt"
+#define POWERDOWN_SCRIPT "/powerdown.txt"
+#define POWERSAVE_SCRIPT "/powersave.txt"
+
 
 // The value of the Rref resistor. Use 430.0 for PT100 and 4300.0 for PT1000
 constexpr float RREF_OVEN = 430.0;

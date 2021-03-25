@@ -25,6 +25,7 @@ OneShot::OneShot(
 void OneShot::handle(uint32_t currentMillis) {
     const bool status = m_modified();
     m_lastHandleTime = currentMillis;
+
     if (status && m_oneShotStatus == WAIT_TRIGGER) {
         triggerStart(currentMillis);
     } else if (m_oneShotStatus == STARTED && (currentMillis - m_startTime >= m_delayTimeMS)) {

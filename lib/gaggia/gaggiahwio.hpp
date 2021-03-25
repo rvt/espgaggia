@@ -57,6 +57,8 @@ public:
         m_totalSlots(255),
         m_pumpStartTime(0),
         m_pumpStopTime(0) {
+        pinMode(m_pumpPin, OUTPUT);
+        pinMode(m_valvePin, OUTPUT);
 
         m_heatElement = new OnOffHeatElement{boiler_pin, 2000};
 
@@ -68,7 +70,7 @@ public:
         sensor2->begin();
         m_steamSensor = new MAX31855sensor{sensor2};
 
-#if defined (GUI_IO)
+#if defined (GUI_BUTTONS)
         m_steamButton = new TestKnob { []() {
             return uiSteamButton;
         }
@@ -77,8 +79,8 @@ public:
             return uiBrewButton;
         } };
 #else
-        m_steamButton = new HWButton {STEAM_BUTTON_PIN, false, 110};
-        m_brewButton  = new HWButton{BREW_BUTTON_PIN, false, 110};
+        m_steamButton = new HWButton {STEAM_BUTTON_PIN, true, 110};
+        m_brewButton  = new HWButton{BREW_BUTTON_PIN, true, 110};
 #endif
 
     }
@@ -150,10 +152,11 @@ public:
             m_handleCounter++;
 
             // These must be called resonable often, at least 50 times a second
-            digitalWrite(m_pumpPin, pump());
-            digitalWrite(m_valvePin, valve());
+            digitalWrite(m_pumpPin, !pump());
+            digitalWrite(m_valvePin, !valve());
             m_heatElement->handle(millis);
             m_heatElement->increase(m_boilerIncreaseValue);
+            m_boilerIncreaseValue = 0.0;
 
             uint8_t currentSlot = 0;
 

@@ -38,6 +38,6 @@ void OnOffHeatElement::handle(const uint32_t millis) {
         pinValue = 0;
     }
 
-    digitalWrite(m_pin, pinValue);
+    digitalWrite(m_pin, !pinValue);
 }
 

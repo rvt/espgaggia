@@ -1,3 +1,4 @@
+loadBug=1;
 pump=0;
 valve=0;
 Message=Turn off steam button,Cappuccino;
@@ -15,10 +16,10 @@ pump=0;
 wait=5000;
 Message=Brewing;
 pump=1;
-wait=30000;
+wait=45000;
 pump=0;
 wait=100;
 valve=0;
 Message=Done;
 wait=2500;
-MessageOff=1;
+MessageOff=3;

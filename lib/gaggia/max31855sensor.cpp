@@ -12,7 +12,7 @@ MAX31855sensor::MAX31855sensor(MAX31855* p_MAX31855) :
 void MAX31855sensor::handle() {
     uint8_t fault = m_MAX31855->read();
     float measured = m_MAX31855->getTemperature();
-    //float internal = m_MAX31855->getInternal();
+    //float measured = m_MAX31855->getInternal();
 
 
     if (fault != 0) {

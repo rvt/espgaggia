@@ -87,8 +87,6 @@ void GaggiaClassicController::init() {
     FuzzyOutput* fan = new FuzzyOutput(FAN_OUTPUT);
     m_fuzzy->addFuzzyOutput(fan);
 
-    //FuzzySet* fanOff = new FuzzySet(0, 0, 0, 0);
-    //fan->addFuzzySet(fanOff);
     FuzzySet* fanLower = fuzzyFromVector(m_config.boiler_lower, false);
     fan->addFuzzySet(fanLower);
     FuzzySet* fanSteady = fuzzyFromVector(m_config.boiler_steady, false);
@@ -140,7 +138,6 @@ void GaggiaClassicController::handle(const uint32_t millis) {
     float requiredTemp;
 
     if (m_brewMode) {
-
         requiredTemp = m_gaggiaIO->brewTemperature()->get();
     } else {
         requiredTemp = m_gaggiaIO->steamTemperature()->get();

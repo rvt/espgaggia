@@ -1,4 +1,7 @@
+loadBug=1;
+MessageOff=1;
 pump=0;
 valve=0;
-brewTemp=85;
+brewMode=1;
+setTemp=75;
 load=/quickStart.txt;
