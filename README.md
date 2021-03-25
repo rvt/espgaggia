@@ -108,7 +108,7 @@ For pins in `platformio.ini`
 _WARNING schematic needs further verification_
 See KIA Print for latest version.
 
-![images](images/schematic.jpg "Schematic")
+![images](images/schematic_new.jpg "Schematic")
 ![images](images/print.jpg "PCB")
 
 # Hardware and functions Tested
