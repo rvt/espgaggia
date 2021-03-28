@@ -1,2 +1,2 @@
 loadBug=1;
-load=/powerdown.txt;
+load=/purgehot.txt;

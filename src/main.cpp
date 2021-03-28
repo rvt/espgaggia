@@ -696,7 +696,7 @@ void setDefaultConfigurations() {
     //    controllerConfig.put("standbyTime", PV(15*60));
 
     // gaggiaConfig
-    configModified |= gaggiaConfig.putNotContains("defaultBrewTemp", PV(94.0f));
+    configModified |= gaggiaConfig.putNotContains("defaultBrewTemp", PV(97.0f));
     configModified |= gaggiaConfig.putNotContains("defaultSteamTemp", PV(145.0f));
     configModified |= gaggiaConfig.putNotContains("powerSaveTemp", PV(50.0f));
 }

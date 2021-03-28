@@ -16,10 +16,8 @@ constexpr uint8_t STEAM_PIN_SPI_CS = CONFIG_STEAM_PIN_SPI_CS;  // OUT
 constexpr uint8_t PERI_PIN_SPI_MISO = CONFIG_PERI_PIN_SPI_MISO;
 constexpr uint8_t PERI_PIN_SPI_CLK = CONFIG_PERI_PIN_SPI_CLK;
 
-#define CONTROLLER_CONFIG_FILENAME "/controllerCfg.conf"
-#define CONFIG_FILENAME "/gaggiaCfg.conf"
-
-
+constexpr char CONTROLLER_CONFIG_FILENAME[] = "/controllerCfg.conf";
+constexpr char CONFIG_FILENAME[] = "/gaggiaCfg.conf";
 constexpr char STARTUP_SCRIPT[] = "/startup.txt";
 constexpr char QUICKSTART_SCRIPT[] = "/quickStart.txt";
 constexpr char STOP_SCRIPT[] = "/stop.txt";

@@ -1,2 +1,2 @@
 loadBug=1;
-load=/powersave.txt;
+load=/purgecold.txt;

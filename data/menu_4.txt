@@ -1,2 +1,0 @@
-loadBug=1;
-load=/purgecold.txt;

@@ -346,7 +346,7 @@ static void gaggia_setting_screen(lv_obj_t* parent) {
     box = spin_create(parent,
                       &ui_elements[BREWTEMP_SPIN].element,
                       &ui_elements[BREWTEMP_PLUS_BUTTON].element,
-                      &ui_elements[BREWTEMP_MIN_BUTTON].element, "Brew tmp.", 60, 99);
+                      &ui_elements[BREWTEMP_MIN_BUTTON].element, "Brew tmp.", 60, 115);
     lv_obj_align(box, parent, LV_ALIGN_IN_TOP_MID, 0, OFFSET);
 
     box = spin_create(parent,
