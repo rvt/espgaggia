@@ -6,6 +6,7 @@ jump=isOff;
 label=isOn;
 Message=Turn off brew and steam;
 BrewAndSteamButton=0;
+MessageOff=1;
 label=isOff;
 BrewOrSteamButton=1,brew,steam;
 label=brew;

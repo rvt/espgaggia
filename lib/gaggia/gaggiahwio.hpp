@@ -86,6 +86,9 @@ public:
     }
 
     virtual bool pump() const {
+        // We only turn the pum on if also the brew button is on
+        // This is a savety feature such that you can only brew coffee
+        // when you are at the controls
         return m_pump && m_brewButton->current();
     }
 

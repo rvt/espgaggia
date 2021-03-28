@@ -21,6 +21,6 @@ wait=5000;
 Message=Brewing;
 pump=1;
 BrewButton=0;
+MessageOff=1;
 pump=0;
 valve=0;
-load=/stop.txt;

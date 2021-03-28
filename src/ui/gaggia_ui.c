@@ -79,8 +79,10 @@ static void generic_event_handler(lv_obj_t* obj, lv_event_t event) {
     }
 
     // Call generic handler
-    if (ui_elements[GENERIC_UI_INTERACTION].event_cb != NULL) {
-        ui_elements[GENERIC_UI_INTERACTION].event_cb(GENERIC_UI_INTERACTION, _NA);
+    if (event == LV_EVENT_CLICKED) {
+        if (ui_elements[GENERIC_UI_INTERACTION].event_cb != NULL) {
+            ui_elements[GENERIC_UI_INTERACTION].event_cb(GENERIC_UI_INTERACTION, _NA);
+        }
     }
 
 }

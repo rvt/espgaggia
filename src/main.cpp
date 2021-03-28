@@ -20,7 +20,7 @@ extern "C" {
 
 #define WIFI_getChipId() (uint32_t)ESP.getEfuseMac()
 
-
+#include "message.hpp"
 #include <WiFiManager.h> // https://github.com/tzapu/WiFiManager
 #include <propertyutils.hpp>
 #include <optparser.hpp>
@@ -70,7 +70,7 @@ Properties controllerConfig;
 bool controllerConfigModified = false;
 // Stores information about the current temperature settings
 Properties gaggiaConfig;
-bool configModified = false;
+volatile bool configModified = false;
 
 // CRC value of last update to MQTT
 uint16_t lastMeasurementCRC = 0;
@@ -101,12 +101,19 @@ static char gaggia_menu_map[MAX_MENU_STR_LENGTH];
 static const char* gaggia_menu_ptr_map[10];
 static char const* LAST_MENU_ENTRY = "";
 
-SemaphoreHandle_t xSemaphore = NULL;
+QueueHandle_t xMainMessageQueue;
+QueueHandle_t xUIMessageQueue;
+
+typedef MainQueue_message<MainMessage_e, 16> MainMessage_t;
+typedef UIQueue_message<UIMessage_e, 32> UIMessage_t;
+
 
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
+
+///////////////////////////////////////////////////////////////////////////
 bool saveConfig(const char* filename, Properties& properties);
 
 OneShot saveGaggiaConfigHandler{
@@ -140,11 +147,17 @@ OneShot saveHardwareConfigHandler{
 OneShot removeCounterLabel{
     5000,
     []() {
-        gaggia_ui_set_visibility(TIMER_BOX, true);
+        UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, TIMER_BOX, (bool)true};
+        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 10);
     },
     []() {
         removeCounterLabel.start();
-        gaggia_ui_set_visibility(TIMER_BOX, false);
+        // UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY};
+        // UIVisibility_t data{TIMER_BOX, false};
+        // setVisibilityMessage.setData(&data, sizeof(UIVisibility_t));
+        // xQueueSend( xUIMessageQueue, ( void * ) &setVisibilityMessage, ( TickType_t ) 10 );
+        UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, TIMER_BOX, (bool)false};
+        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 10);
     },
     []() {
         if (gaggiaIO.pump()) {
@@ -154,20 +167,6 @@ OneShot removeCounterLabel{
         return gaggiaIO.pump();
     }
 };
-
-// OneShot hardwareMonitor {
-//     60*1000*3,
-//     []() {},
-//     []() {
-//         gaggia_scripting_load("/quickStart.txt");
-//     },
-//     []() {
-//         if (!gaggiaIO.pump() &&) {
-
-//         }
-//         return !gaggiaIO.pump();
-//     }
-// };
 
 OneShot powerDownMonitor {
     //TODO: Make this a configuration
@@ -194,13 +193,28 @@ OneShot powerSaveMonitor {
     }
 };
 
+void updateUI();
+OneShot uiUpdateTimer {
+    100,
+    []() {
+    },
+    []() {
+        updateUI();
+        uiUpdateTimer.start();
+    },
+    []() {
+        return true;
+    }
+};
+
 bool loadConfig(const char* filename, Properties& properties) {
     bool ret = false;
 
     if (FileSystemFSBegin()) {
         if (FileSystemFS.exists(filename)) {
             //file exists, reading and loading
-            Serial.print(F("Opening : ")); Serial.print (filename);
+            Serial.print(F("Opening : "));
+            Serial.print(filename);
             File configFile = FileSystemFS.open(filename, "r");
 
             if (configFile) {
@@ -212,8 +226,8 @@ bool loadConfig(const char* filename, Properties& properties) {
             }
 
         } else {
-               Serial.print(F(" failed."));
-             Serial.println(filename);
+            Serial.print(F(" failed."));
+            Serial.println(filename);
         }
 
         // FileSystemFS.end();
@@ -233,7 +247,8 @@ bool saveConfig(const char* filename, Properties& properties) {
 
     if (FileSystemFSBegin()) {
         FileSystemFS.remove(filename);
-        Serial.print(F("Opening : ")); Serial.print (filename);
+        Serial.print(F("Opening : "));
+        Serial.print(filename);
         File configFile = FileSystemFS.open(filename, "w");
 
         if (configFile) {
@@ -270,6 +285,13 @@ void handleScriptContext() {
 
 #endif
 
+    if (gaggia_scripting_context() != nullptr) {
+        gaggia_scripting_context()->m_brewButton = gaggiaIO.brewButton()->current();
+        gaggia_scripting_context()->m_steamButton = gaggiaIO.steamButton()->current();
+        gaggia_scripting_context()->m_steamTemperature = gaggiaIO.steamTemperature()->get();
+        gaggia_scripting_context()->m_brewTemperature = gaggiaIO.brewTemperature()->get();
+    }
+
     int8_t handle = gaggia_scripting_handle();
 
     switch (handle) {
@@ -286,7 +308,7 @@ void handleScriptContext() {
             gaggiaIO.pump(gaggia_scripting_context()->m_pump);
             gaggiaIO.valve(gaggia_scripting_context()->m_valve);
             controller->brewMode(gaggia_scripting_context()->m_brewMode);
-            controller->setPoint(gaggia_scripting_context()->m_temperature);
+            controller->setPoint(gaggia_scripting_context()->m_setPoint);
             break;
     }
 
@@ -432,17 +454,16 @@ void setupMQTTCallback() {
 }
 
 void turnOffHardware() {
-    // Turn off boiler, pump and vale
+    // Turn off boiler, pump and valve
     pinMode(BOILER_PIN, OUTPUT);
     pinMode(PUMP_PIN, OUTPUT);
     pinMode(VALVE_PIN, OUTPUT);
     digitalWrite(BOILER_PIN, true);
     digitalWrite(PUMP_PIN, true);
     digitalWrite(VALVE_PIN, true);
-    gaggia_scripting_load(STARTUP_SCRIPT);
 }
 
-void setupNetworkCallbacl() {
+void setupNetworkCallback() {
     network_ota_begin_callback([]() {
         turnOffHardware();
     });
@@ -516,6 +537,11 @@ void setupWifiManager() {
 ///////////////////////////////////////////////////////////////////////////
 //  UI Event handling
 ///////////////////////////////////////////////////////////////////////////
+
+/**
+ * Setup all events comming from the UI
+ * All callbacks are savegarded by a mutex created in displayTask(...)
+ */
 void setup_ui_events() {
 #if defined (GUI_IO)
 
@@ -566,30 +592,78 @@ void setup_ui_events() {
 
     // Events
     gaggia_ui_add_event_cb(STOP_BUTTON, [](enum ui_element_types label, enum ui_event event) {
-        gaggia_scripting_load(STOP_SCRIPT);
+        xQueueReset(xMainMessageQueue);
+        xQueueReset(xUIMessageQueue);
+        MainMessage_t loadScriptMessage {MainMessage_e::LOAD_SCRIPT};
+        loadScriptMessage.copyChar(STOP_SCRIPT);
+        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, (TickType_t) 10);
     });
 
     gaggia_ui_add_event_cb(GENERIC_UI_INTERACTION, [](enum ui_element_types label, enum ui_event event) {
-        powerSaveMonitor.start();
-        powerDownMonitor.start();
-        powerSaveMonitor.trigger();
-        powerDownMonitor.trigger();
+        const MainMessage_t messageSave {MainMessage_e::POWERSAVE_RESTART};
+        xQueueSend(xMainMessageQueue, (void*) &messageSave, (TickType_t) 10);
+
+        const MainMessage_t messageDown {MainMessage_e::POWERDOWN_RESTART};
+        xQueueSend(xMainMessageQueue, (void*) &messageDown, (TickType_t) 10);
     });
 
     gaggia_ui_add_event_cb(BREWTEMP_SPIN, [](enum ui_element_types label, enum ui_event event) {
-        gaggiaConfig.put("defaultBrewTemp", PV(gaggia_ui_spin_get_value(BREWTEMP_SPIN) * 1.0f));
-        configModified = true;
+        const MainMessage_t message {MainMessage_e::SET_DEFAULTBREWTEMPERATURE, gaggia_ui_spin_get_value(BREWTEMP_SPIN) * 1.0f};
+        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 10);
     });
+
     gaggia_ui_add_event_cb(STEAMTEMP_SPIN, [](enum ui_element_types label, enum ui_event event) {
-        gaggiaConfig.put("defaultSteamTemp", PV(gaggia_ui_spin_get_value(STEAMTEMP_SPIN) * 1.0f));
-        configModified = true;
+        const MainMessage_t message {MainMessage_e::SET_DEFAULTSTEAMTEMPERATURE, gaggia_ui_spin_get_value(STEAMTEMP_SPIN) * 1.0f};
+        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 10);
     });
+
     gaggia_ui_add_event_cb(PROCESS_SELECT_MATRIX, [](enum ui_element_types label, enum ui_event event) {
         char filename[16];
         snprintf(filename, sizeof(filename), "/menu_%d.txt", gaggia_ui_btn_map_active(label));
-        gaggia_scripting_load(filename);
-        gaggia_ui_change_screen(0);
+
+        MainMessage_t loadScriptMessage {MainMessage_e::LOAD_SCRIPT};
+        loadScriptMessage.copyChar(filename);
+        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, (TickType_t) 10);
+
+        const UIMessage_t changeViewMessage {UIMessage_e::CHANGE_VIEW, _LAST_ITEM_STUB, (uint32_t)0};
+        xQueueSend(xUIMessageQueue, (void*) &changeViewMessage, (TickType_t) 10);
+
     });
+}
+
+void updateUI() {
+    auto currentMillis = millis();
+    // Temporary untill we have a better spot
+    char buffer[16];
+    dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, buffer);
+    UIMessage_t brewMessage{UIMessage_e::SET_TEXT, BREW_TEMP_LABEL, buffer};
+    xQueueSend(xUIMessageQueue, (void*) &brewMessage, (TickType_t) 10);
+
+    dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, buffer);
+    UIMessage_t steamMessage{UIMessage_e::SET_TEXT, STEAM_TEMP_LABEL, buffer};
+    xQueueSend(xUIMessageQueue, (void*) &steamMessage, (TickType_t) 10);
+
+    removeCounterLabel.handle(currentMillis);
+
+    if (gaggiaIO.pump()) {
+        powerSaveMonitor.hold();
+        powerDownMonitor.hold();
+    }
+
+    // Quick hack to ensure that we will always show the correct time on the display
+    // If we just look at when the pump goes off, we  don't show correct timings
+    static uint32_t last_pumpMillis = 0;
+    const uint32_t pumpMillis = gaggiaIO.pumpMillis();
+
+    if (last_pumpMillis != pumpMillis) {
+        last_pumpMillis = pumpMillis;
+
+        if (pumpMillis < 999000) {
+            dtostrf(pumpMillis / 1000.f, 1, 1, buffer);
+            UIMessage_t timerMessage{UIMessage_e::SET_TEXT, TIMER_LABEL, (const char*)buffer};
+            xQueueSend(xUIMessageQueue, (void*) &timerMessage, (TickType_t) 10);
+        }
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////
@@ -628,16 +702,97 @@ void setDefaultConfigurations() {
 }
 
 
-void displayTask(void* pvParameters) {
-    const TickType_t xDelay = 50 / portTICK_PERIOD_MS;
+void handleUIMessageQueue() {
+    UIMessage_t uiMessage_t{UIMessage_e::NOOP};
 
-    while (true) {
-        if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
-            display_loop();
-            xSemaphoreGive(xSemaphore);
+    uint8_t size = uxQueueMessagesWaiting(xUIMessageQueue);
+
+    bool large;
+
+    if (size > 8) {
+        Serial.print("Large xUIMessageQueue : ");
+        large = true;
+    } else {
+        large = false;
+    }
+
+    while (xQueueReceive(xUIMessageQueue, &(uiMessage_t), (TickType_t) 0) == pdPASS) {
+        if (large) {
+            Serial.print((uint8_t)uiMessage_t.type);
+            Serial.print(" ");
         }
 
+        switch (uiMessage_t.type) {
+            case UIMessage_e::CHANGE_VIEW:
+                gaggia_ui_change_screen(uiMessage_t.intValue);
+                break;
+
+            case UIMessage_e::SET_VISIBILITY:
+                gaggia_ui_set_visibility(uiMessage_t.element, uiMessage_t.boolValue);
+                break;
+
+            case UIMessage_e::SET_TEXT:
+                gaggia_ui_set_text(uiMessage_t.element, uiMessage_t.charValue);
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    if (large) {
+        Serial.println("");
+    }
+}
+
+void displayTask(void* pvParameters) {
+    const TickType_t xDelay = pdMS_TO_TICKS(50);
+
+    while (true) {
+        handleUIMessageQueue();
+        display_loop();
         vTaskDelay(xDelay);
+    }
+}
+
+void handleMainMessageQueue() {
+    MainMessage_t mainMessage_t{MainMessage_e::NOOP};
+
+    uint8_t size = uxQueueMessagesWaiting(xMainMessageQueue);
+
+    if (size > 8) {
+        Serial.println("Large xMainMessageQueue");
+    }
+
+    while (xQueueReceive(xMainMessageQueue, &(mainMessage_t), (TickType_t) 0) == pdPASS) {
+        switch (mainMessage_t.type) {
+            case MainMessage_e::POWERSAVE_RESTART:
+                powerSaveMonitor.start();
+                powerSaveMonitor.trigger();
+                break;
+
+            case MainMessage_e::POWERDOWN_RESTART:
+                powerDownMonitor.start();
+                powerDownMonitor.trigger();
+                break;
+
+            case MainMessage_e::SET_DEFAULTBREWTEMPERATURE:
+                gaggiaConfig.put("defaultBrewTemp", PV(mainMessage_t.floatValue));
+                configModified = true;
+                break;
+
+            case MainMessage_e::SET_DEFAULTSTEAMTEMPERATURE:
+                gaggiaConfig.put("defaultSteamTemp", PV(mainMessage_t.floatValue));
+                configModified = true;
+                break;
+
+            case MainMessage_e::LOAD_SCRIPT:
+                gaggia_scripting_load(mainMessage_t.charValue);
+                break;
+
+            default:
+                break;
+        }
     }
 }
 
@@ -649,6 +804,8 @@ void loop() {
     const uint32_t currentMillis = millis();
 
     if (currentMillis - tick50Millis >= TICK50MS_PERIOD) {
+
+        handleMainMessageQueue();
 
         tick50Millis = currentMillis;
         counter50TimesSec++;
@@ -680,38 +837,7 @@ void loop() {
         } else if (counter50TimesSec % maxSlots == slot50++) {
             powerSaveMonitor.handle(currentMillis);
             powerDownMonitor.handle(currentMillis);
-        } else if (counter50TimesSec % maxSlots == slot50++) {
-
-            // Temporary untill we have a better spot
-            if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
-                dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(BREW_TEMP_LABEL));
-                dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, gaggia_ui_set_text_buffer(STEAM_TEMP_LABEL));
-                gaggia_ui_set_text(BREW_TEMP_LABEL, NULL);
-                gaggia_ui_set_text(STEAM_TEMP_LABEL, NULL);
-
-                removeCounterLabel.handle(currentMillis);
-
-                if (gaggiaIO.pump()) {
-                    powerSaveMonitor.hold();
-                    powerDownMonitor.hold();
-                }
-
-                // Quick hack to ensure that we will always show the correct time on the display
-                // If we just look at when the pump goes off, we  don't show correct timings
-                static uint32_t last_pumpMillis = 0;
-                const uint32_t pumpMillis = gaggiaIO.pumpMillis();
-
-                if (last_pumpMillis != pumpMillis) {
-                    last_pumpMillis = pumpMillis;
-
-                    if (pumpMillis < 999000) {
-                        dtostrf(pumpMillis / 1000.f, 1, 1, gaggia_ui_set_text_buffer(TIMER_LABEL));
-                        gaggia_ui_set_text(TIMER_LABEL, NULL);
-                    }
-                }
-
-                xSemaphoreGive(xSemaphore);
-            }
+            uiUpdateTimer.handle(currentMillis);
         } else if (counter50TimesSec % maxSlots == slot50++) {
             wifiManager.process();
         } else if (counter50TimesSec % maxSlots == slot50++) {
@@ -730,11 +856,7 @@ void loop() {
         // Gaggia IO has it's own timer
         gaggiaIO.handle(currentMillis);
 
-        // Idially we should run this within 10ms orso...
-        if (xSemaphoreTake(xSemaphore, (TickType_t) 4)) {
-            handleScriptContext();
-            xSemaphoreGive(xSemaphore);
-        }
+        handleScriptContext();
     }
 
 }
@@ -750,7 +872,24 @@ void setup() {
 
     // Enable serial port
     Serial.begin(115200);
-    delay(500);
+    // Wait until Serial comes available
+    uint8_t counter = 0;
+
+    while (!Serial && counter < 10) {
+        delay(5 * counter++);
+    }
+
+    xMainMessageQueue = xQueueCreate(10, sizeof(MainMessage_t));
+    xUIMessageQueue = xQueueCreate(10, sizeof(UIMessage_t));
+
+    if (xMainMessageQueue != nullptr) {
+        Serial.println("xMainMessageQueue created");
+    }
+
+    if (xUIMessageQueue != nullptr) {
+        Serial.println("xUIMessageQueue created");
+    }
+
 
     // load configurations
     loadConfig(CONTROLLER_CONFIG_FILENAME, controllerConfig);
@@ -763,14 +902,14 @@ void setup() {
 
     network_init();
     setupMQTTCallback();
+    setupNetworkCallback();
     setupWifiManager();
     display_init();
     setup_ui_events();
 
-    xSemaphore = xSemaphoreCreateMutex();
-
     powerSaveMonitor.trigger();
     powerDownMonitor.trigger();
+    uiUpdateTimer.trigger();
 
     xTaskCreatePinnedToCore(
         displayTask,

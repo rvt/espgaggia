@@ -6,44 +6,48 @@
 #include <gaggiaio.hpp>
 
 using namespace rvt::scriptrunner;
-typedef PlainTextContext<512> PlainTextContext512;
+typedef PlainTextContext<768> PlainTextContext768;
 
-class GaggiaScriptContext : public PlainTextContext512 {
+class GaggiaScriptContext : public PlainTextContext768 {
 public:
-    // TODO: Remove m_gaggiaIO so we have a proper place to copy values back and firth from context
-    GaggiaIO* m_gaggiaIO;
+    // Out
     bool m_valve;
     bool m_pump;
-    float m_temperature;
     bool m_brewMode;
+    float m_setPoint;
+    // Read
+    float m_brewTemperature;
+    float m_steamTemperature;
+    bool m_brewButton;
+    bool m_steamButton;
 
     GaggiaScriptContext(
-        GaggiaIO* p_gaggiaIO,
-        const char* script,
-        bool valve,
-        bool pump,
-        float temperature,
-        bool brewMode
+        const char* script
     ) :
-        PlainTextContext512{script},
-        m_gaggiaIO(p_gaggiaIO),
-        m_valve(pump),
-        m_pump(pump),
-        m_temperature(temperature),
-        m_brewMode(brewMode) {
+        PlainTextContext768{script},
+        m_valve(false),
+        m_pump(false),
+        m_brewMode(true),
+        m_setPoint(15.0f),
+        m_brewTemperature(15.0f),
+        m_steamTemperature(15.0f),
+        m_brewButton(false),
+        m_steamButton(false) {
 
     }
 
     GaggiaScriptContext(
-        GaggiaIO* p_gaggiaIO,
         const char* script,
         GaggiaScriptContext* copy
     ) :
-        PlainTextContext512{script},
-        m_gaggiaIO(p_gaggiaIO),
+        PlainTextContext768{script},
         m_valve(copy->m_valve),
         m_pump(copy->m_pump),
-        m_temperature(copy->m_temperature),
-        m_brewMode(copy->m_brewMode) {
+        m_brewMode(copy->m_brewMode),
+        m_setPoint(copy->m_setPoint),
+        m_brewTemperature(copy->m_brewTemperature),
+        m_steamTemperature(copy->m_steamTemperature),
+        m_brewButton(copy->m_brewButton),
+        m_steamButton(copy->m_steamButton) {
     }
 };
