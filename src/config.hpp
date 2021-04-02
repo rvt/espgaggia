@@ -33,7 +33,7 @@ constexpr float RREF_OVEN = 430.0;
 constexpr float RNOMINAL_OVEN = 100.0;
 
 constexpr int32_t BREW_TEMP_MIN = 70;
-constexpr int32_t BREW_TEMP_MAX = 98;
+constexpr int32_t BREW_TEMP_MAX = 120;
 
 constexpr int32_t STEAM_TEMP_MIN = 120;
 constexpr int32_t STEAM_TEMP_MAX = 150;

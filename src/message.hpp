@@ -4,10 +4,11 @@
 #include <stddef.h>
 #include "ui/gaggia_ui.h"
 
+// TODO: Cleanup this file
+
 enum class MainMessage_e {
     NOOP,
     POWERSAVE_RESTART,
-    POWERDOWN_RESTART,
     SET_DEFAULTBREWTEMPERATURE,
     SET_DEFAULTSTEAMTEMPERATURE,
     LOAD_SCRIPT
@@ -17,7 +18,8 @@ enum class UIMessage_e {
     NOOP,
     CHANGE_VIEW,
     SET_VISIBILITY,
-    SET_TEXT
+    SET_TEXT,
+    SET_TEXT_STATIC // Use this if you are sure that the text you are placing fits in the existing buffer
 };
 
 template <typename P1, typename P2>

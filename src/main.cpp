@@ -67,10 +67,10 @@ WiFiManagerParameter wifiManager_mqtt_password("input", "mqtt password", "", MQT
 
 // Stores information about the controller on communication level
 Properties controllerConfig;
-bool controllerConfigModified = false;
+volatile bool controllerConfigModified = false;
 // Stores information about the current temperature settings
 Properties gaggiaConfig;
-volatile bool configModified = false;
+volatile bool gaggiaConfigModified = false;
 
 // CRC value of last update to MQTT
 uint16_t lastMeasurementCRC = 0;
@@ -122,11 +122,11 @@ OneShot saveGaggiaConfigHandler{
     },
     []() {
         saveConfig(CONFIG_FILENAME, gaggiaConfig);
-        configModified = false;
+        gaggiaConfigModified = false;
         saveGaggiaConfigHandler.start();
     },
     []() {
-        return configModified;
+        return gaggiaConfigModified;
     }
 };
 
@@ -148,7 +148,7 @@ OneShot removeCounterLabel{
     5000,
     []() {
         UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, TIMER_BOX, (bool)true};
-        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 10);
+        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 0);
     },
     []() {
         removeCounterLabel.start();
@@ -157,7 +157,7 @@ OneShot removeCounterLabel{
         // setVisibilityMessage.setData(&data, sizeof(UIVisibility_t));
         // xQueueSend( xUIMessageQueue, ( void * ) &setVisibilityMessage, ( TickType_t ) 10 );
         UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, TIMER_BOX, (bool)false};
-        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 10);
+        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 0);
     },
     []() {
         if (gaggiaIO.pump()) {
@@ -218,8 +218,7 @@ bool loadConfig(const char* filename, Properties& properties) {
             File configFile = FileSystemFS.open(filename, "r");
 
             if (configFile) {
-                Serial.print(F(" loaded."));
-                Serial.println(filename);
+                Serial.println(F(" loaded."));
                 deserializeProperties<LINE_BUFFER_SIZE>(configFile, properties);
                 serializeProperties<LINE_BUFFER_SIZE>(Serial, properties);
                 configFile.close();
@@ -252,7 +251,7 @@ bool saveConfig(const char* filename, Properties& properties) {
         File configFile = FileSystemFS.open(filename, "w");
 
         if (configFile) {
-            Serial.print(F(" Saved."));
+            Serial.println(F(" Saved."));
             serializeProperties<LINE_BUFFER_SIZE>(configFile, properties);
             serializeProperties<LINE_BUFFER_SIZE>(Serial, properties, false);
             ret = true;
@@ -274,8 +273,12 @@ bool saveConfig(const char* filename, Properties& properties) {
 void handleScriptContext() {
 
 #if defined (GUI_IO)
+
+
+#if defined (GUI_BUTTONS)
     gaggia_ui_set_led(BREW_BUT_STATUS, uiBrewButton);
     gaggia_ui_set_led(STEAM_BUT_STATUS, uiSteamButton);
+#endif
     gaggia_ui_set_led_bright(HEAT_STATUS_SSR, gaggiaIO.heatElement()->power() * 2);
 
     if (gaggia_scripting_context() != nullptr) {
@@ -596,25 +599,22 @@ void setup_ui_events() {
         xQueueReset(xUIMessageQueue);
         MainMessage_t loadScriptMessage {MainMessage_e::LOAD_SCRIPT};
         loadScriptMessage.copyChar(STOP_SCRIPT);
-        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, (TickType_t) 10);
+        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, pdMS_TO_TICKS(100));
     });
 
     gaggia_ui_add_event_cb(GENERIC_UI_INTERACTION, [](enum ui_element_types label, enum ui_event event) {
         const MainMessage_t messageSave {MainMessage_e::POWERSAVE_RESTART};
-        xQueueSend(xMainMessageQueue, (void*) &messageSave, (TickType_t) 10);
-
-        const MainMessage_t messageDown {MainMessage_e::POWERDOWN_RESTART};
-        xQueueSend(xMainMessageQueue, (void*) &messageDown, (TickType_t) 10);
+        xQueueSend(xMainMessageQueue, (void*) &messageSave, (TickType_t) 0);
     });
 
     gaggia_ui_add_event_cb(BREWTEMP_SPIN, [](enum ui_element_types label, enum ui_event event) {
         const MainMessage_t message {MainMessage_e::SET_DEFAULTBREWTEMPERATURE, gaggia_ui_spin_get_value(BREWTEMP_SPIN) * 1.0f};
-        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 10);
+        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 0);
     });
 
     gaggia_ui_add_event_cb(STEAMTEMP_SPIN, [](enum ui_element_types label, enum ui_event event) {
         const MainMessage_t message {MainMessage_e::SET_DEFAULTSTEAMTEMPERATURE, gaggia_ui_spin_get_value(STEAMTEMP_SPIN) * 1.0f};
-        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 10);
+        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 0);
     });
 
     gaggia_ui_add_event_cb(PROCESS_SELECT_MATRIX, [](enum ui_element_types label, enum ui_event event) {
@@ -623,10 +623,10 @@ void setup_ui_events() {
 
         MainMessage_t loadScriptMessage {MainMessage_e::LOAD_SCRIPT};
         loadScriptMessage.copyChar(filename);
-        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, (TickType_t) 10);
+        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, (TickType_t) 0);
 
         const UIMessage_t changeViewMessage {UIMessage_e::CHANGE_VIEW, _LAST_ITEM_STUB, (uint32_t)0};
-        xQueueSend(xUIMessageQueue, (void*) &changeViewMessage, (TickType_t) 10);
+        xQueueSend(xUIMessageQueue, (void*) &changeViewMessage, (TickType_t) 0);
 
     });
 }
@@ -636,12 +636,12 @@ void updateUI() {
     // Temporary untill we have a better spot
     char buffer[16];
     dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, buffer);
-    UIMessage_t brewMessage{UIMessage_e::SET_TEXT, BREW_TEMP_LABEL, buffer};
-    xQueueSend(xUIMessageQueue, (void*) &brewMessage, (TickType_t) 10);
+    UIMessage_t brewMessage{UIMessage_e::SET_TEXT_STATIC, BREW_TEMP_LABEL, buffer};
+    xQueueSend(xUIMessageQueue, (void*) &brewMessage, (TickType_t) 0);
 
     dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, buffer);
-    UIMessage_t steamMessage{UIMessage_e::SET_TEXT, STEAM_TEMP_LABEL, buffer};
-    xQueueSend(xUIMessageQueue, (void*) &steamMessage, (TickType_t) 10);
+    UIMessage_t steamMessage{UIMessage_e::SET_TEXT_STATIC, STEAM_TEMP_LABEL, buffer};
+    xQueueSend(xUIMessageQueue, (void*) &steamMessage, (TickType_t) 0);
 
     removeCounterLabel.handle(currentMillis);
 
@@ -652,7 +652,7 @@ void updateUI() {
 
     // Quick hack to ensure that we will always show the correct time on the display
     // If we just look at when the pump goes off, we  don't show correct timings
-    static uint32_t last_pumpMillis = 0;
+    static uint32_t last_pumpMillis = 1; // pumpMillis returns 1 after initialise
     const uint32_t pumpMillis = gaggiaIO.pumpMillis();
 
     if (last_pumpMillis != pumpMillis) {
@@ -660,8 +660,8 @@ void updateUI() {
 
         if (pumpMillis < 999000) {
             dtostrf(pumpMillis / 1000.f, 1, 1, buffer);
-            UIMessage_t timerMessage{UIMessage_e::SET_TEXT, TIMER_LABEL, (const char*)buffer};
-            xQueueSend(xUIMessageQueue, (void*) &timerMessage, (TickType_t) 10);
+            UIMessage_t timerMessage{UIMessage_e::SET_TEXT_STATIC, TIMER_LABEL, (const char*)buffer};
+            xQueueSend(xUIMessageQueue, (void*) &timerMessage, (TickType_t) 0);
         }
     }
 }
@@ -696,9 +696,9 @@ void setDefaultConfigurations() {
     //    controllerConfig.put("standbyTime", PV(15*60));
 
     // gaggiaConfig
-    configModified |= gaggiaConfig.putNotContains("defaultBrewTemp", PV(97.0f));
-    configModified |= gaggiaConfig.putNotContains("defaultSteamTemp", PV(145.0f));
-    configModified |= gaggiaConfig.putNotContains("powerSaveTemp", PV(50.0f));
+    gaggiaConfigModified |= gaggiaConfig.putNotContains("defaultBrewTemp", PV(97.0f));
+    gaggiaConfigModified |= gaggiaConfig.putNotContains("defaultSteamTemp", PV(145.0f));
+    gaggiaConfigModified |= gaggiaConfig.putNotContains("powerSaveTemp", PV(50.0f));
 }
 
 
@@ -707,20 +707,11 @@ void handleUIMessageQueue() {
 
     uint8_t size = uxQueueMessagesWaiting(xUIMessageQueue);
 
-    bool large;
-
     if (size > 8) {
-        Serial.print("Large xUIMessageQueue : ");
-        large = true;
-    } else {
-        large = false;
+        Serial.println("Large xUIMessageQueue : ");
     }
 
     while (xQueueReceive(xUIMessageQueue, &(uiMessage_t), (TickType_t) 0) == pdPASS) {
-        if (large) {
-            Serial.print((uint8_t)uiMessage_t.type);
-            Serial.print(" ");
-        }
 
         switch (uiMessage_t.type) {
             case UIMessage_e::CHANGE_VIEW:
@@ -735,23 +726,20 @@ void handleUIMessageQueue() {
                 gaggia_ui_set_text(uiMessage_t.element, uiMessage_t.charValue);
                 break;
 
-            default:
+            case UIMessage_e::SET_TEXT_STATIC:
+                char *buffer = gaggia_ui_set_text_buffer(uiMessage_t.element);
+                strcpy(buffer, uiMessage_t.charValue);
+                gaggia_ui_set_text(uiMessage_t.element, nullptr);
                 break;
         }
     }
 
-    if (large) {
-        Serial.println("");
-    }
 }
 
 void displayTask(void* pvParameters) {
-    const TickType_t xDelay = pdMS_TO_TICKS(50);
-
     while (true) {
         handleUIMessageQueue();
         display_loop();
-        vTaskDelay(xDelay);
     }
 }
 
@@ -764,26 +752,23 @@ void handleMainMessageQueue() {
         Serial.println("Large xMainMessageQueue");
     }
 
-    while (xQueueReceive(xMainMessageQueue, &(mainMessage_t), (TickType_t) 0) == pdPASS) {
+    if (xQueueReceive(xMainMessageQueue, &(mainMessage_t), (TickType_t) 0) == pdPASS) {
         switch (mainMessage_t.type) {
             case MainMessage_e::POWERSAVE_RESTART:
                 powerSaveMonitor.start();
                 powerSaveMonitor.trigger();
-                break;
-
-            case MainMessage_e::POWERDOWN_RESTART:
                 powerDownMonitor.start();
                 powerDownMonitor.trigger();
                 break;
 
             case MainMessage_e::SET_DEFAULTBREWTEMPERATURE:
                 gaggiaConfig.put("defaultBrewTemp", PV(mainMessage_t.floatValue));
-                configModified = true;
+                gaggiaConfigModified = true;
                 break;
 
             case MainMessage_e::SET_DEFAULTSTEAMTEMPERATURE:
                 gaggiaConfig.put("defaultSteamTemp", PV(mainMessage_t.floatValue));
-                configModified = true;
+                gaggiaConfigModified = true;
                 break;
 
             case MainMessage_e::LOAD_SCRIPT:

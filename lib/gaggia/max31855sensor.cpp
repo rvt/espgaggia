@@ -6,7 +6,10 @@
 MAX31855sensor::MAX31855sensor(MAX31855* p_MAX31855) :
     TemperatureSensor(),
     m_MAX31855(p_MAX31855),
-    m_lastTemp(-1.0) {
+    m_lastTemp(-1.0),
+    m_faultCode(0),
+    m_temp_sum(0.0f),
+    m_samplecount(0) {
 }
 
 void MAX31855sensor::handle() {
@@ -22,11 +25,22 @@ void MAX31855sensor::handle() {
         //Serial.print (thermocouple->genericError());
         //Serial.print (thermocouple->noRead());
         //  Serial.println (thermocouple->noCommunication());
-        return;
+        m_faultCode = m_MAX31855->getStatus();
     } else {
-        m_lastTemp = m_lastTemp + (measured - m_lastTemp) * 0.1f;
+        constexpr uint8_t SAMPLES = 25; // at 50Hz about 2 samples per sec 
+        m_temp_sum += measured; 
+        m_samplecount += 1;  
+        
+        if (m_samplecount >= SAMPLES) {             
+            m_lastTemp = m_lastTemp + ((m_temp_sum / m_samplecount) - m_lastTemp) * 0.25f;
+            m_temp_sum = 0.0f; 
+            m_samplecount = 0;
+        }
     }
+}
 
+uint16_t MAX31855sensor::faultCode() const {
+    return m_faultCode;
 }
 
 float MAX31855sensor::get() const {

@@ -47,11 +47,11 @@ static void generic_event_handler(lv_obj_t* obj, lv_event_t event) {
     uint32_t id = lv_obj_get_user_data(obj);
 
     if (event == LV_EVENT_CLICKED) {
-        if (ui_elements[id].event_cb == NULL) {
+        if (ui_elements[id].event_cb != NULL) {
+            ui_elements[id].event_cb(id, EV_CLICK);
             return;
         }
 
-        ui_elements[id].event_cb(id, EV_CLICK);
     } else if (event == LV_EVENT_SHORT_CLICKED || event == LV_EVENT_LONG_PRESSED_REPEAT) {
 
         // Used internall for the spinners
@@ -66,25 +66,18 @@ static void generic_event_handler(lv_obj_t* obj, lv_event_t event) {
         }
 
     } else if (event == LV_EVENT_VALUE_CHANGED) {
-        if (ui_elements[id].event_cb == NULL) {
+        if (ui_elements[id].event_cb != NULL) {
+            ui_elements[id].event_cb(id, EV_CHANGE);
             return;
         }
-
-
-        // if (id == PROCESS_SELECT_MATRIX) {
-        //     const char* txt = lv_btnmatrix_get_active_btn_text(obj);
-        //     uint16_t id = lv_btnmatrix_get_active_btn_text(obj);
-        //     printf("%s was pressed\n", txt);
-        // }
     }
 
     // Call generic handler
     if (event == LV_EVENT_CLICKED) {
         if (ui_elements[GENERIC_UI_INTERACTION].event_cb != NULL) {
-            ui_elements[GENERIC_UI_INTERACTION].event_cb(GENERIC_UI_INTERACTION, _NA);
+            ui_elements[GENERIC_UI_INTERACTION].event_cb(GENERIC_UI_INTERACTION, EV_CLICK);
         }
     }
-
 }
 
 
@@ -395,12 +388,14 @@ void gaggia_ui_create_ui(void) {
 
 
     /*Copy the previous LED and switch it ON*/
+#if defined (GUI_BUTTONS)
     ui_elements[BREW_BUT_STATUS].element  = lv_led_create(tab1, NULL);
     lv_obj_align(ui_elements[BREW_BUT_STATUS].element, NULL, LV_ALIGN_CENTER, 80, 60);
 
     /*Copy the previous LED and switch it ON*/
     ui_elements[STEAM_BUT_STATUS].element  = lv_led_create(tab1, NULL);
     lv_obj_align(ui_elements[STEAM_BUT_STATUS].element, NULL, LV_ALIGN_CENTER, -80, 60);
+#endif
 #endif
 
 

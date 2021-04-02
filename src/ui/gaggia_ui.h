@@ -40,8 +40,10 @@ enum ui_element_types {
     HEAT_STATUS_SSR,
     VALVE_STATUS_SSR,
     PUMP_STATUS_SSR,
+#if defined (GUI_BUTTONS)
     BREW_BUT_STATUS,
     STEAM_BUT_STATUS,
+#endif
 #endif
     GENERIC_UI_INTERACTION,
     _LAST_ITEM_STUB

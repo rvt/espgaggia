@@ -13,5 +13,5 @@ Message=Waiting for pressure;
 steamTemp=defaultSteamTemp;
 Message=Steam is ready;
 SteamButton=0;
-setTemp=75;
+setTemp=85;
 load=/purge.txt;

@@ -1,6 +1,6 @@
 #pragma once
 #include "testtemperature.hpp"
-
+#include <cstdint>
 
 class TestTemperature : public TemperatureSensor {
 private:
@@ -18,6 +18,10 @@ public:
     }
     virtual void handle() {
 
+    }
+
+    virtual uint16_t faultCode() const {
+        return 0;
     }
 
 };

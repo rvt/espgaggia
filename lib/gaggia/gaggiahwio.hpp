@@ -53,8 +53,6 @@ public:
         m_valve(false),
         m_boilerIncreaseValue(0.0f),
         m_startMilis(0),
-        m_handleCounter(0),
-        m_totalSlots(255),
         m_pumpStartTime(0),
         m_pumpStopTime(0) {
         pinMode(m_pumpPin, OUTPUT);
@@ -146,28 +144,24 @@ public:
         return m_heatElement;
     }
 
-
     void handle(unsigned long millis) {
         constexpr int period = 1000 / 50;
 
         if (millis - m_startMilis >= period) {
             m_startMilis += period;
-            m_handleCounter++;
 
             // These must be called resonable often, at least 50 times a second
             digitalWrite(m_pumpPin, !pump());
             digitalWrite(m_valvePin, !valve());
+
             m_heatElement->handle(millis);
             m_heatElement->increase(m_boilerIncreaseValue);
-            m_boilerIncreaseValue = 0.0;
+            m_boilerIncreaseValue = 0.0;            
+            m_brewSensor->handle();
+            m_steamSensor->handle();
 
-            uint8_t currentSlot = 0;
-
+            uint8_t currentSlot=0;
             if (m_handleCounter % m_totalSlots == currentSlot++) {
-                m_brewSensor->handle();
-            } else if (m_handleCounter % m_totalSlots == currentSlot++) {
-                m_steamSensor->handle();
-            } else if (m_handleCounter % m_totalSlots == currentSlot++) {
                 m_steamButton->handle();
             } else if (m_handleCounter % m_totalSlots == currentSlot++) {
                 m_brewButton->handle();
