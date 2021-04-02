@@ -53,11 +53,11 @@ void GaggiaClassicController::init() {
 
     FuzzySet* tempErrorNegativeHigh = fuzzyFromVector(m_config.temp_error_high, true);
     tempErrorInput->addFuzzySet(tempErrorNegativeHigh);
-    FuzzySet* tempErrorNegativeMedium = fuzzyFromVector(m_config.temp_error_medium, true);
+    FuzzySet* tempErrorNegativeMedium = fuzzyFromVector(m_config.temp_errorNeg_medium, false);
     tempErrorInput->addFuzzySet(tempErrorNegativeMedium);
     FuzzySet* tempErrorLow = fuzzyFromVector(m_config.temp_error_low, false);
     tempErrorInput->addFuzzySet(tempErrorLow);
-    FuzzySet* tempErrorPositiveMedium = fuzzyFromVector(m_config.temp_error_medium, false);
+    FuzzySet* tempErrorPositiveMedium = fuzzyFromVector(m_config.temp_errorPos_medium, false);
     tempErrorInput->addFuzzySet(tempErrorPositiveMedium);
     FuzzySet* tempErrorPositiveHigh = fuzzyFromVector(m_config.temp_error_high, false);
     tempErrorInput->addFuzzySet(tempErrorPositiveHigh);
@@ -67,11 +67,11 @@ void GaggiaClassicController::init() {
     m_fuzzy->addFuzzyInput(tempDrop);
     FuzzySet* tempDecreasesFast = fuzzyFromVector(m_config.temp_change_fast, true);
     tempDrop->addFuzzySet(tempDecreasesFast);
-    FuzzySet* tempDecreasesMedium = fuzzyFromVector(m_config.temp_change_medium, true);
+    FuzzySet* tempDecreasesMedium = fuzzyFromVector(m_config.temp_changeDec_medium, false);
     tempDrop->addFuzzySet(tempDecreasesMedium);
     FuzzySet* tempChangesSlow = fuzzyFromVector(m_config.temp_change_slow, false);
     tempDrop->addFuzzySet(tempChangesSlow);
-    FuzzySet* tempIncreasedMedium = fuzzyFromVector(m_config.temp_change_medium, false);
+    FuzzySet* tempIncreasedMedium = fuzzyFromVector(m_config.temp_changeInc_medium, false);
     tempDrop->addFuzzySet(tempIncreasedMedium);
     FuzzySet* tempIncreasesFast = fuzzyFromVector(m_config.temp_change_fast, false);
     tempDrop->addFuzzySet(tempIncreasesFast);

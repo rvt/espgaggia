@@ -22,15 +22,17 @@ struct GaggiaClassicControllerConfig {
     std::array<float, 4> boiler_higher2 = std::array<float, 4> { {1, 50, 50, 50} };
     std::array<float, 4> boiler_high = std::array<float, 4> { {100, 100, 100, 100} };
 
-    std::array<float, 4> temp_error_low = std::array<float, 4> { {-7, -3, 3, 7} };
-    std::array<float, 4> temp_error_medium  = std::array<float, 4> { {3, 12, 12, 20} };
-    std::array<float, 4> temp_error_high = std::array<float, 4> { {12, 300, 300, 300} };
+    std::array<float, 4> temp_error_low = std::array<float, 4> { {-5, -3, 3, 5} };
+    std::array<float, 4> temp_errorPos_medium  = std::array<float, 4> { {3, 10, 10, 20} };
+    std::array<float, 4> temp_errorNeg_medium  = std::array<float, 4> { {-20, -10, -10, -3} };
+    std::array<float, 4> temp_error_high = std::array<float, 4> { {10, 300, 300, 300} };
 
     // Change per TEMPERATUR_DIFFERENCE_OVER_SEC seconds
     // During brewing we seem to get 1.6degree/sec drop per second
     // During heating we seem to get 1.8degree/sec increase per second
     std::array<float, 4> temp_change_slow = std::array<float, 4> { {-1.5, 0, 0, 1.5} };
-    std::array<float, 4> temp_change_medium = std::array<float, 4> { {0, 1.5, 1.5, 3} };
+    std::array<float, 4> temp_changeDec_medium = std::array<float, 4> { {-3, -1.5, -1.5, -0.25} };
+    std::array<float, 4> temp_changeInc_medium = std::array<float, 4> { {0.25, 1.5, 1.5, 3} };
     std::array<float, 4> temp_change_fast = std::array<float, 4> { {1.5, 10, 10, 10} };
 };
 

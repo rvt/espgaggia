@@ -22,9 +22,8 @@ class GaggiaHWIO : public GaggiaIO {
     bool m_pump;
     bool m_valve;
     float m_boilerIncreaseValue;
+    float m_boilerSetValue;
     unsigned long m_startMilis;
-    uint32_t m_handleCounter;
-    uint8_t m_totalSlots;
     uint32_t m_pumpStartTime;
     uint32_t m_pumpStopTime;
 
@@ -52,6 +51,7 @@ public:
         m_pump(false),
         m_valve(false),
         m_boilerIncreaseValue(0.0f),
+        m_boilerSetValue(-1.0f),
         m_startMilis(0),
         m_pumpStartTime(0),
         m_pumpStopTime(0) {
@@ -125,6 +125,10 @@ public:
         m_boilerIncreaseValue = boiler;
     }
 
+    virtual void boilerSet(float boiler) {
+        m_boilerSetValue = boiler;
+    }
+
     virtual Button* steamButton() const {
         return m_steamButton;
     }
@@ -157,17 +161,17 @@ public:
             m_heatElement->handle(millis);
             m_heatElement->increase(m_boilerIncreaseValue);
             m_boilerIncreaseValue = 0.0;            
+
+            if (m_boilerSetValue>0) {
+                m_heatElement->power(m_boilerSetValue);
+                m_boilerSetValue=-1.0f;
+            }
+
             m_brewSensor->handle();
             m_steamSensor->handle();
 
-            uint8_t currentSlot=0;
-            if (m_handleCounter % m_totalSlots == currentSlot++) {
-                m_steamButton->handle();
-            } else if (m_handleCounter % m_totalSlots == currentSlot++) {
-                m_brewButton->handle();
-            } else {
-                m_totalSlots = currentSlot;
-            }
+            m_steamButton->handle();
+            m_brewButton->handle();
         }
 
 

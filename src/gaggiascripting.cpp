@@ -136,20 +136,20 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
                 case 0: {
 
                     UIMessage_t timerMessage1{UIMessage_e::SET_TEXT, PROCESS_MESSAGE_LABEL, (char*)parsed};
-                    xQueueSend(xUIMessageQueue, (void*) &timerMessage1, (TickType_t) 10);
+                    xQueueSend(xUIMessageQueue, (void*) &timerMessage1, (TickType_t) 0);
                 }
                 break;
 
                 case 1: {
                     UIMessage_t timerMessage2{UIMessage_e::SET_TEXT, PROCESS_MESSAGE_TITLE, (char*)parsed};
-                    xQueueSend(xUIMessageQueue, (void*) &timerMessage2, (TickType_t) 10);
+                    xQueueSend(xUIMessageQueue, (void*) &timerMessage2, (TickType_t) 0);
                 }
                 break;
             }
         });
 
         UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, PROCESS_MESSAGE_CONTAINER, (bool)true};
-        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 10);
+        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 0);
         return true;
     }
                                                         });
@@ -159,7 +159,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
         Serial.println(value);
 
         UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, PROCESS_MESSAGE_CONTAINER, (bool)false};
-        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 10);
+        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 0);
         return true;
     }
                                                         });

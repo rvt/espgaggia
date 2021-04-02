@@ -148,7 +148,7 @@ OneShot removeCounterLabel{
     5000,
     []() {
         UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, TIMER_BOX, (bool)true};
-        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 0);
+        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 1);
     },
     []() {
         removeCounterLabel.start();
@@ -157,7 +157,7 @@ OneShot removeCounterLabel{
         // setVisibilityMessage.setData(&data, sizeof(UIVisibility_t));
         // xQueueSend( xUIMessageQueue, ( void * ) &setVisibilityMessage, ( TickType_t ) 10 );
         UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, TIMER_BOX, (bool)false};
-        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 0);
+        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 1);
     },
     []() {
         if (gaggiaIO.pump()) {
@@ -604,17 +604,17 @@ void setup_ui_events() {
 
     gaggia_ui_add_event_cb(GENERIC_UI_INTERACTION, [](enum ui_element_types label, enum ui_event event) {
         const MainMessage_t messageSave {MainMessage_e::POWERSAVE_RESTART};
-        xQueueSend(xMainMessageQueue, (void*) &messageSave, (TickType_t) 0);
+        xQueueSend(xMainMessageQueue, (void*) &messageSave, (TickType_t) 1);
     });
 
     gaggia_ui_add_event_cb(BREWTEMP_SPIN, [](enum ui_element_types label, enum ui_event event) {
         const MainMessage_t message {MainMessage_e::SET_DEFAULTBREWTEMPERATURE, gaggia_ui_spin_get_value(BREWTEMP_SPIN) * 1.0f};
-        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 0);
+        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 1);
     });
 
     gaggia_ui_add_event_cb(STEAMTEMP_SPIN, [](enum ui_element_types label, enum ui_event event) {
         const MainMessage_t message {MainMessage_e::SET_DEFAULTSTEAMTEMPERATURE, gaggia_ui_spin_get_value(STEAMTEMP_SPIN) * 1.0f};
-        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 0);
+        xQueueSend(xMainMessageQueue, (void*) &message, (TickType_t) 1);
     });
 
     gaggia_ui_add_event_cb(PROCESS_SELECT_MATRIX, [](enum ui_element_types label, enum ui_event event) {
@@ -623,10 +623,10 @@ void setup_ui_events() {
 
         MainMessage_t loadScriptMessage {MainMessage_e::LOAD_SCRIPT};
         loadScriptMessage.copyChar(filename);
-        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, (TickType_t) 0);
+        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, (TickType_t) 1);
 
         const UIMessage_t changeViewMessage {UIMessage_e::CHANGE_VIEW, _LAST_ITEM_STUB, (uint32_t)0};
-        xQueueSend(xUIMessageQueue, (void*) &changeViewMessage, (TickType_t) 0);
+        xQueueSend(xUIMessageQueue, (void*) &changeViewMessage, (TickType_t) 1); 
 
     });
 }
@@ -637,11 +637,11 @@ void updateUI() {
     char buffer[16];
     dtostrf(gaggiaIO.brewTemperature()->get(), 0, 0, buffer);
     UIMessage_t brewMessage{UIMessage_e::SET_TEXT_STATIC, BREW_TEMP_LABEL, buffer};
-    xQueueSend(xUIMessageQueue, (void*) &brewMessage, (TickType_t) 0);
+    xQueueSend(xUIMessageQueue, (void*) &brewMessage, (TickType_t) 1);
 
     dtostrf(gaggiaIO.steamTemperature()->get(), 0, 0, buffer);
     UIMessage_t steamMessage{UIMessage_e::SET_TEXT_STATIC, STEAM_TEMP_LABEL, buffer};
-    xQueueSend(xUIMessageQueue, (void*) &steamMessage, (TickType_t) 0);
+    xQueueSend(xUIMessageQueue, (void*) &steamMessage, (TickType_t) 1);
 
     removeCounterLabel.handle(currentMillis);
 
@@ -661,7 +661,7 @@ void updateUI() {
         if (pumpMillis < 999000) {
             dtostrf(pumpMillis / 1000.f, 1, 1, buffer);
             UIMessage_t timerMessage{UIMessage_e::SET_TEXT_STATIC, TIMER_LABEL, (const char*)buffer};
-            xQueueSend(xUIMessageQueue, (void*) &timerMessage, (TickType_t) 0);
+            xQueueSend(xUIMessageQueue, (void*) &timerMessage, (TickType_t) 1);
         }
     }
 }
@@ -707,12 +707,13 @@ void handleUIMessageQueue() {
 
     uint8_t size = uxQueueMessagesWaiting(xUIMessageQueue);
 
-    if (size > 8) {
+    if (size > 6) {
         Serial.println("Large xUIMessageQueue : ");
     }
 
-    while (xQueueReceive(xUIMessageQueue, &(uiMessage_t), (TickType_t) 0) == pdPASS) {
-
+    // Ensure that we send with xUIMessageQueue and a ticktype of 1, when setting it to 0
+    // it seems that xQueueReceive was blocking 
+    while (xQueueReceive(xUIMessageQueue, &(uiMessage_t), ( TickType_t ) 1) == pdPASS) {
         switch (uiMessage_t.type) {
             case UIMessage_e::CHANGE_VIEW:
                 gaggia_ui_change_screen(uiMessage_t.intValue);
@@ -733,13 +734,13 @@ void handleUIMessageQueue() {
                 break;
         }
     }
-
 }
 
 void displayTask(void* pvParameters) {
-    while (true) {
+    while (true) {    
         handleUIMessageQueue();
         display_loop();
+        vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
 
@@ -752,7 +753,7 @@ void handleMainMessageQueue() {
         Serial.println("Large xMainMessageQueue");
     }
 
-    if (xQueueReceive(xMainMessageQueue, &(mainMessage_t), (TickType_t) 0) == pdPASS) {
+    if (xQueueReceive(xMainMessageQueue, &(mainMessage_t), (TickType_t) 1) == pdPASS) {
         switch (mainMessage_t.type) {
             case MainMessage_e::POWERSAVE_RESTART:
                 powerSaveMonitor.start();
@@ -798,7 +799,7 @@ void loop() {
         controller -> handle(currentMillis);
 
         // once a second publish status to mqtt (if there are changes)
-        if (counter50TimesSec % 50 == 0) {
+        if (counter50TimesSec % 25 == 0) {
             publishStatusToMqtt();
         }
 
@@ -835,12 +836,11 @@ void loop() {
         }
     }
 
+    // Gaggia IO has it's own timer
+    gaggiaIO.handle(currentMillis);
+
     if (currentMillis - tick10Millis >= TICK10MS_PERIOD) {
         tick10Millis = currentMillis;
-
-        // Gaggia IO has it's own timer
-        gaggiaIO.handle(currentMillis);
-
         handleScriptContext();
     }
 
@@ -865,7 +865,7 @@ void setup() {
     }
 
     xMainMessageQueue = xQueueCreate(10, sizeof(MainMessage_t));
-    xUIMessageQueue = xQueueCreate(10, sizeof(UIMessage_t));
+    xUIMessageQueue = xQueueCreate(8, sizeof(UIMessage_t));
 
     if (xMainMessageQueue != nullptr) {
         Serial.println("xMainMessageQueue created");
