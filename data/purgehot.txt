@@ -1,4 +1,3 @@
-loadBug=1;
 brewMode=1;
 pump=0;
 valve=0;

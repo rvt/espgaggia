@@ -815,7 +815,7 @@ void loop() {
         }
 
         // Maintenance stuff
-#if SHOW_FREE_HEAP==1
+#if defined(SHOW_FREE_HEAP)
 
         if (counter50TimesSec % 50 == 0) {
             Serial.println(ESP.getFreeHeap());

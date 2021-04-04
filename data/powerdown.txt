@@ -1,4 +1,3 @@
-loadBug=1;
 Message=Power Down,;
 pump=0;
 valve=0;

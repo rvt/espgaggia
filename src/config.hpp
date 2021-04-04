@@ -1,20 +1,21 @@
 // How often we are updating the mqtt state in ms
-#define MQTT_LASTWILL                           "lastwill"
-#define MQTT_STATUS                             "status"
+#include <cstdint>
+constexpr char MQTT_LASTWILL[]="lastwill";
+constexpr char MQTT_STATUS[]="status";
 
-constexpr uint8_t STEAM_BUTTON_PIN = CONFIG_STEAM_BUTTON_PIN;    //  IN
-constexpr uint8_t BREW_BUTTON_PIN = CONFIG_BREW_BUTTON_PIN;    //  IN
+constexpr uint8_t STEAM_BUTTON_PIN = CONFIG_STEAM_BUTTON_PIN;   //  IN
+constexpr uint8_t BREW_BUTTON_PIN = CONFIG_BREW_BUTTON_PIN;     //  IN
 
-constexpr uint8_t BOILER_PIN = CONFIG_SSR_BOILER_PIN;    //  OUT
-constexpr uint8_t VALVE_PIN = CONFIG_SSR_VALVE_PIN;    //  OUT
-constexpr uint8_t PUMP_PIN = CONFIG_SSR_PUMP_PIN;    //  OUT
+constexpr uint8_t BOILER_PIN = CONFIG_SSR_BOILER_PIN;           //  OUT
+constexpr uint8_t VALVE_PIN = CONFIG_SSR_VALVE_PIN;             //  OUT
+constexpr uint8_t PUMP_PIN = CONFIG_SSR_PUMP_PIN;               //  OUT
 
 // Pin 15 didn´t make the esp start up so we skipped it and took 2
-constexpr uint8_t BREW_PIN_SPI_CS = CONFIG_BREW_PIN_SPI_CS;  // OUT
-constexpr uint8_t STEAM_PIN_SPI_CS = CONFIG_STEAM_PIN_SPI_CS;  // OUT
+constexpr uint8_t BREW_PIN_SPI_CS = CONFIG_BREW_PIN_SPI_CS;     // OUT
+constexpr uint8_t STEAM_PIN_SPI_CS = CONFIG_STEAM_PIN_SPI_CS;   // OUT
 
-constexpr uint8_t PERI_PIN_SPI_MISO = CONFIG_PERI_PIN_SPI_MISO;
-constexpr uint8_t PERI_PIN_SPI_CLK = CONFIG_PERI_PIN_SPI_CLK;
+constexpr uint8_t PERI_PIN_SPI_MISO = CONFIG_PERI_PIN_SPI_MISO; // IN
+constexpr uint8_t PERI_PIN_SPI_CLK = CONFIG_PERI_PIN_SPI_CLK;   // OUT
 
 constexpr char CONTROLLER_CONFIG_FILENAME[] = "/controllerCfg.conf";
 constexpr char CONFIG_FILENAME[] = "/gaggiaCfg.conf";
