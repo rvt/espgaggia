@@ -1,9 +1,11 @@
 loadBug=1;
 pump=0;
 valve=0;
-Message=Turn off steam button,Cappuccino;
+SteamButton=1,steamIsOff;
+Message=Turn off Steam,Cappuccino;
 SteamButton=0;
-Message=Press brew to start;
+label=steamIsOff;
+Message=Press brew to start,Cappuccino;
 BrewButton=1;
 Message=Wait for brew temperature;
 brewTemp=defaultBrewTemp;

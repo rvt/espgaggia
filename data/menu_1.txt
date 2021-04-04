@@ -1,9 +1,11 @@
 loadBug=1;
 pump=0;
 valve=0;
-Message=Turn off steam button,American Coffee;
+SteamButton=1,steamIsOff;
+Message=Turn off Steam,American Coffee;
 SteamButton=0;
-Message=Press brew to start;
+label=steamIsOff;
+Message=Press brew to start,American Coffee;
 BrewButton=1;
 Message=Wait for brew temperature;
 brewTemp=defaultBrewTemp;

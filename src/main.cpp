@@ -596,10 +596,9 @@ void setup_ui_events() {
     // Events
     gaggia_ui_add_event_cb(STOP_BUTTON, [](enum ui_element_types label, enum ui_event event) {
         xQueueReset(xMainMessageQueue);
-        xQueueReset(xUIMessageQueue);
         MainMessage_t loadScriptMessage {MainMessage_e::LOAD_SCRIPT};
         loadScriptMessage.copyChar(STOP_SCRIPT);
-        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, pdMS_TO_TICKS(100));
+        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, pdMS_TO_TICKS(1));
     });
 
     gaggia_ui_add_event_cb(GENERIC_UI_INTERACTION, [](enum ui_element_types label, enum ui_event event) {
@@ -708,12 +707,13 @@ void handleUIMessageQueue() {
     uint8_t size = uxQueueMessagesWaiting(xUIMessageQueue);
 
     if (size > 6) {
-        Serial.println("Large xUIMessageQueue : ");
+        Serial.println("Large xUIMessageQueue");
     }
 
     // Ensure that we send with xUIMessageQueue and a ticktype of 1, when setting it to 0
     // it seems that xQueueReceive was blocking 
     while (xQueueReceive(xUIMessageQueue, &(uiMessage_t), ( TickType_t ) 1) == pdPASS) {
+        //Serial.print ((uint8_t)uiMessage_t.type);
         switch (uiMessage_t.type) {
             case UIMessage_e::CHANGE_VIEW:
                 gaggia_ui_change_screen(uiMessage_t.intValue);
@@ -736,11 +736,19 @@ void handleUIMessageQueue() {
     }
 }
 
+void _displayTask() {
+    handleUIMessageQueue();
+    uint32_t sta = millis(); 
+    display_loop();
+    uint32_t t = millis() - sta;
+    if (t>100) {
+            Serial.println (millis() - sta);
+    }
+}
+
 void displayTask(void* pvParameters) {
     while (true) {    
-        handleUIMessageQueue();
-        display_loop();
-        vTaskDelay(pdMS_TO_TICKS(1));
+        _displayTask();
     }
 }
 
@@ -791,6 +799,9 @@ void loop() {
 
     if (currentMillis - tick50Millis >= TICK50MS_PERIOD) {
 
+#if defined(DISPLAY_TASK_IN_MAIN_LOOP)
+        _displayTask();
+#endif
         handleMainMessageQueue();
 
         tick50Millis = currentMillis;
@@ -825,7 +836,7 @@ void loop() {
             powerDownMonitor.handle(currentMillis);
             uiUpdateTimer.handle(currentMillis);
         } else if (counter50TimesSec % maxSlots == slot50++) {
-            wifiManager.process();
+            //wifiManager.process();
         } else if (counter50TimesSec % maxSlots == slot50++) {
             if (shouldRestart != 0 && (currentMillis - shouldRestart >= 5000)) {
                 shouldRestart = 0;
@@ -896,6 +907,7 @@ void setup() {
     powerDownMonitor.trigger();
     uiUpdateTimer.trigger();
 
+#if ! defined(DISPLAY_TASK_IN_MAIN_LOOP)
     xTaskCreatePinnedToCore(
         displayTask,
         "displayUpdateTask",
@@ -904,7 +916,7 @@ void setup() {
         0,
         NULL,
         0);         /* Core ID */
-
+#endif
     tick10Millis = millis();
     tick50Millis = millis();
 }

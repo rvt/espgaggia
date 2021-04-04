@@ -360,7 +360,7 @@ void gaggia_ui_create_ui(void) {
     // lv_coord_t vres = lv_disp_get_ver_res(NULL);
 
     // Background
-    lv_obj_t* wp = lv_img_create(lv_scr_act(), NULL);
+   lv_obj_t* wp = lv_img_create(lv_scr_act(), NULL);
     lv_obj_set_width(wp, hres);
     lv_img_set_src(wp, &coffee);
 
