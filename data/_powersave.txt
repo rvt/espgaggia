@@ -3,4 +3,4 @@ pump=0;
 valve=0;
 brewMode=1;
 setTemp=powerSaveTemp;
-load=/quickStart.txt;
+load=/_quickStart.txt;

@@ -19,11 +19,11 @@ constexpr uint8_t PERI_PIN_SPI_CLK = CONFIG_PERI_PIN_SPI_CLK;   // OUT
 
 constexpr char CONTROLLER_CONFIG_FILENAME[] = "/controllerCfg.conf";
 constexpr char CONFIG_FILENAME[] = "/gaggiaCfg.conf";
-constexpr char STARTUP_SCRIPT[] = "/startup.txt";
-constexpr char QUICKSTART_SCRIPT[] = "/quickStart.txt";
-constexpr char STOP_SCRIPT[] = "/stop.txt";
-constexpr char POWERDOWN_SCRIPT[] = "/powerdown.txt";
-constexpr char POWERSAVE_SCRIPT[] = "/powersave.txt";
+constexpr char STARTUP_SCRIPT[] = "/_startup.txt";
+constexpr char QUICKSTART_SCRIPT[] = "/_quickStart.txt";
+constexpr char STOP_SCRIPT[] = "/_stop.txt";
+constexpr char POWERDOWN_SCRIPT[] = "/_powerdown.txt";
+constexpr char POWERSAVE_SCRIPT[] = "/_powersave.txt";
 
 
 // The value of the Rref resistor. Use 430.0 for PT100 and 4300.0 for PT1000

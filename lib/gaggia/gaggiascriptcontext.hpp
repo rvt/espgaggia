@@ -6,9 +6,9 @@
 #include <gaggiaio.hpp>
 
 using namespace rvt::scriptrunner;
-typedef PlainTextContext<768> PlainTextContext768;
+typedef PlainTextContext<MAX_SCRIPT_SIZE> PlainTextContextXXX;
 
-class GaggiaScriptContext : public PlainTextContext768 {
+class GaggiaScriptContext : public PlainTextContextXXX {
 public:
     // Out
     bool m_valve;
@@ -24,7 +24,7 @@ public:
     GaggiaScriptContext(
         const char* script
     ) :
-        PlainTextContext768{script},
+        PlainTextContextXXX{script},
         m_valve(false),
         m_pump(false),
         m_brewMode(true),
@@ -40,7 +40,7 @@ public:
         const char* script,
         GaggiaScriptContext* copy
     ) :
-        PlainTextContext768{script},
+        PlainTextContextXXX{script},
         m_valve(copy->m_valve),
         m_pump(copy->m_pump),
         m_brewMode(copy->m_brewMode),

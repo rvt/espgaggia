@@ -71,9 +71,9 @@ float getFloatValue(const char* value, uint8_t pos) {
             const char* parsedValue = (char*)parsed;
 
             if (gaggiaConfig.contains(parsedValue)) {
-                rValue = (float)gaggiaConfig.get(parsedValue);
+                rValue = between((float)gaggiaConfig.get(parsedValue), 0.0f, 160.0f);
             } else {
-                rValue = (float)parsed;
+                rValue = between((float)parsed, 0.0f, 200.0f);
             }
         }
     });
@@ -236,7 +236,7 @@ uint8_t gaggia_load_script() {
                 //file exists, reading and loading
                 File configFile = FileSystemFS.open(scriptContextFileToLoad, "r");
 
-                if (configFile) {
+                if (configFile && configFile.size() < (uint16_t)MAX_SCRIPT_SIZE) {
                     uint16_t pos = 0;
 
                     while (configFile.available()) {

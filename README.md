@@ -64,6 +64,35 @@ For other compiler options check `config.hpp` and `platformio.ini` for other opt
 The device will use the know wifi network or it wil present itself as a WIFI accesspoint using a wifimanager. Just connect to that accesspoint and open a browser to configure WIFI andf MQTT.
 By default it will have some scripts to do some of it's work. Check the data directory that is almost self explanatory on how it works.
 
+# Scripting
+
+Well, it's not really scripting because the scripting capabilities are very limited, only simple jumps and no math. See it like more like a PLC function where you can make decissions, jump or wait at various points within the process and controle the state of the machine
+
+| Command       | Type    | Values        | Explanation | Example |    |
+| ------------- |:--      |:------------- |:-----       |:-----   |:-- | 
+| jump          | String | label name | Jump to a specific label | `jump=foo;`<br>`skipThis=1;`<br>`label=foo;`| Jump to label `foo` skiping the line `skipThis` |
+| label         | String | any string | A label jump can jump into      |   See Jump |
+| valve | bool | 1 or 0 | Turn on the 3 way valve      | `valve=1;` | Turn on the 3 way valve |
+| pump | bool | 1 or 0 | Turn on the pump      | `pump=1;` | Turn on the pump |
+| brewMode | bool | 1 or 0 | Setup the controller to read brew sensor temperature. Otherwise read temperature from steam sensor | `brewMode=1;` | |
+| brewTemp | float or valueRef | 0..160 or string | Set a desired temperature and enable brewMode, wait untill reached or above      | `brewTemp=95;`<br>`brewTemp=fromConfig;` | Set the brew temperature to 95 degrees. Or read the desired temperature from the `fromConfig` value in `gaggiaCfg.conf` |
+| steamTemp | float or valueRef | 0..160 or string | Setup the controller to read steam sensor temperature. Otherwise read temperature from steam sensor | `steamTemp=150;` | |
+| setTemp | float or valueRef | 0..160 or string | Set a desired temperature, similar to brewTemp but do not wait | `setTemp=95;`<br>`setTemp=fromConfig;` | |
+| Message | String,String | | Shows a message box on the first screen | `Message=Message,Title;` | Display a message 'message' with title 'Title' |
+| MessageOff | ignored | | Hide the message box | `MessageOff=1;` | Hode the message box | 
+| load | String | any valid script filename | Load a new script | `load=/foo.txt;` | Load a new script with filename foo.txt, / is mandatory | 
+| SteamButton | bool | 1 or 0 | Wait for the steam button to have a specific value | `SteamButton=1;` | Wait untill the steam button is pressed |
+| BrewButton | bool | 1 or 0 | Wait for the brew button to have a specific value | `BrewButton=0;` | Wait untill the brew button is released |
+| BrewOrSteamButton | bool,String,String,bool | 1 or 0,label,label,1 or 0 | Wait for the brew or steam button to have a specific value | `BrewOrSteamButton=1,jumpBrew,jumpSteam,1;` | Wait untill Brew or Steam is set (first bool is set or unset) jump to brew or steam, when non is set wait (0) or continue 1 |
+| BrewAndSteamButton | bool | 1 or 0 | Wait for the brew and steam button to have a specific value | `BrewAndSteamButton=1;` | Wait untill the brew and steam button are in a pressed state |
+
+#### Script Limitations:
+
+* A script file can currently be a maximum of 768 bytes. (See platformio.ini)
+* Every line must be ended with an ;
+* Scripting is still under (slow) development, let me know if you use it and/or have ideas
+* See `data` directory for full working examples
+
 # MQTT Messages
 
 Messages can be send as simple string (properties format) or as JSON.

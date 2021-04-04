@@ -5,4 +5,4 @@ brewMode=1;
 setTemp=85;
 wait=2500;
 MessageOff=1;
-load=/quickStart.txt;
+load=/_quickStart.txt;

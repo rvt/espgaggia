@@ -1,4 +1,3 @@
-loadBug=1;
 pump=0;
 valve=0;
 SteamButton=1,steamIsOff;
