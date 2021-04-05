@@ -46,9 +46,19 @@ Flash: [=======   ]  72.6% (used 1427385 bytes from 1966080 bytes)
 ============== [SUCCESS] Took 4.41 seconds ==============
 ```
 
-To upload to your wemos device run the following command (OSX):
-```platformio run --target upload -e gaggia```
-```platformio run --target uploadfs -e gaggia```
+To upload to your esp32 device run the following command (OSX):
+
+```
+platformio run --target uploadfs -e gaggia
+platformio run --target upload -e gaggia
+```
+
+To update over Over The Air (OTA):
+```
+platformio run --target uploadfs -e gaggia --upload-port <IP or DOmain name of device>
+platformio run --target upload -e gaggia --upload-port <IP or DOmain name of device>
+```
+
 
 For other compiler options check `config.hpp` and `platformio.ini` for other options. 
 
@@ -78,6 +88,42 @@ Well, it's not really scripting because the scripting capabilities are very limi
 | BrewButton | bool | 1 or 0 | Wait for the brew button to have a specific value | `BrewButton=0;` | Wait untill the brew button is released |
 | BrewOrSteamButton | bool,String,String,bool | 1 or 0,label,label,1 or 0 | Wait for the brew or steam button to have a specific value | `BrewOrSteamButton=1,jumpBrew,jumpSteam,1;` | Wait untill Brew or Steam is set (first bool is set or unset) jump to brew or steam, when non is set wait (0) or continue 1 |
 | BrewAndSteamButton | bool | 1 or 0 | Wait for the brew and steam button to have a specific value | `BrewAndSteamButton=1;` | Wait untill the brew and steam button are in a pressed state |
+
+### Example of the Cappuccino script
+
+Note, current scripting version does not support of adding comments, but they are added in the below script for clarity
+
+Explanation of `cappuccino.txt`
+
+```
+pump=0; # Turn of pump (if it was on)
+valve=0; # Turn of valve (if it was on)
+SteamButton=1,steamIsOff; # If the steam button was set, continue to next line, otherwhsie jump to the steamIsOff label
+Message=Turn off Steam,Cappuccino; # If steam was on, display message asking to turn off
+SteamButton=0; # Wait here untill the steam button is in the off position
+label=steamIsOff; # label that is skipped, or can bu jumped onto
+Message=Press brew to start,Cappuccino; # Displat message with title
+BrewButton=1; # Wait untill the brew button is pressed
+Message=Wait for brew temperature; # Show message taht it is waiting untill brew temperaure is reached
+brewTemp=defaultBrewTemp; # Set brewmode and temperature from configuration and wait untill temperature is reached
+Message=Preinfusing...; # Display pre-infusing message
+valve=1; # Turn on valve
+wait=100; # wait 100ms
+pump=1; # Turn on pump
+wait=2000; # Wait 2 second
+pump=0; # Turn of Pump
+wait=5000; # Wait 5 seconds
+Message=Brewing; # Display brewing
+pump=1; # Turn on pump again
+wait=30000; #Wait 30 seconds
+pump=0; # Turn off pump
+wait=100; # Wait 100ms
+valve=0; # Turn off valve
+Message=Done; # Display done message
+wait=2500; # Wait 2500ms
+MessageOff=1; #Hide message box
+```
+
 
 #### Script Limitations:
 
