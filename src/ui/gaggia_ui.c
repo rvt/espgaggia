@@ -162,6 +162,7 @@ static lv_obj_t* gaggia_timer(lv_obj_t* parent) {
 
 #if defined (BUILD_NATIVE)
     lv_label_set_text(ui_elements[TIMER_LABEL].element, "12.6");
+    gaggia_ui_set_visibility(TIMER_BOX, false);
 #else
     gaggia_ui_set_visibility(TIMER_BOX, false);
 #endif
@@ -216,7 +217,7 @@ static lv_obj_t* spin_create(lv_obj_t* parent,
     return box;
 }
 #if defined (BUILD_NATIVE)
-const char* map[] = {"Cappuccino", "A. Coffee", ""};
+const char* map[] = {"Cappuccino", "A. Coffee", "\n", "Purge Cold", "Purge Hot", ""};
 #endif
 
 lv_obj_t* gaggia_brew_options(lv_obj_t* parent) {
@@ -302,7 +303,7 @@ static void gaggia_brew_screen(lv_obj_t* parent) {
     // Place for Steam Temperature
     gp = gaggia_gauge(parent, &ui_elements[STEAM_TEMP_OBJ].element, &ui_elements[STEAM_TEMP_LABEL].element, &label1);
 #if defined (BUILD_NATIVE)
-    gaggia_ui_set_text(STEAM_TEMP_LABEL, "145");
+    gaggia_ui_set_text(STEAM_TEMP_LABEL, "95");
 #endif
     lv_label_set_text(label1, "Steam");
     lv_obj_realign(label1);
