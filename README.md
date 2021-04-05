@@ -12,18 +12,11 @@ Features
 * Stand by and power down options with a lower temperature to conserve energy.
 
 
-Main screen:
+# How it looks like...
 
-![images](images/screen1.jpg "Screen 1")
-
-
-Recipe/Menu screen:
-
-![images](images/screen2.jpg "Screen 1")
-
-Settings Screen:
-
-![images](images/screen3.jpg "Screen 1")
+ Main           |  Menu Screen | Settings Screen | Mounted on Gaggia
+:-------------------------:|:-------------------------:|:-------------------------:|:-------------------------:
+<img src="images/screen1.jpg" width="200"> |  <img src="images/screen2.jpg" width="200"> | <img src="images/screen3.jpg" width="200"> |  <img src="images/image1.jpg" width="200">
 
 # Word Of Warning
 
