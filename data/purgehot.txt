@@ -16,3 +16,4 @@ BrewButton=0;
 MessageOff=1;
 pump=0;
 valve=0;
+load=/_quickStart.txt;

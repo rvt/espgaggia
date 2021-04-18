@@ -21,6 +21,4 @@ wait=45000;
 pump=0;
 wait=100;
 valve=0;
-Message=Done;
-wait=2500;
 MessageOff=1;

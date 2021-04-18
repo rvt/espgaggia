@@ -27,13 +27,13 @@ void MAX31855sensor::handle() {
         //  Serial.println (thermocouple->noCommunication());
         m_faultCode = m_MAX31855->getStatus();
     } else {
-        constexpr uint8_t SAMPLES = 25; // at 50Hz about 2 samples per sec 
-        m_temp_sum += measured; 
-        m_samplecount += 1;  
-        
-        if (m_samplecount >= SAMPLES) {             
+        constexpr uint8_t SAMPLES = 25; // at 50Hz about 2 samples per sec
+        m_temp_sum += measured;
+        m_samplecount += 1;
+
+        if (m_samplecount >= SAMPLES) {
             m_lastTemp = m_lastTemp + ((m_temp_sum / m_samplecount) - m_lastTemp) * 0.25f;
-            m_temp_sum = 0.0f; 
+            m_temp_sum = 0.0f;
             m_samplecount = 0;
         }
     }

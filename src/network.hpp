@@ -10,6 +10,7 @@
 
 void network_init();
 void network_shutdown();
+// Note that you must call this handle from the same task as you call esp_task_wdt_init().
 void network_handle();
 bool network_publishToMQTT(const char* topic, const char* payload, bool retained);
 void network_mqtt_callback(MQTT_CALLBACK_SIGNATURE);

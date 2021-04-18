@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <memory>
@@ -16,27 +17,27 @@ constexpr uint8_t UPDATES_PER_SECOND = 2;              // numnber of fuzzy calcu
 constexpr uint8_t TEMPERATUR_DIFFERENCE_OVER_SEC = 2;
 
 struct GaggiaClassicControllerConfig {
-    std::array<float, 4> boiler_lower  = std::array<float, 4> { {-50, -50, -50, 1} };
+    std::array<float, 4> boiler_lower  = std::array<float, 4> { {-100, -50, -50, 5} };
     std::array<float, 4> boiler_steady  = std::array<float, 4> { {-2, 0, 0, 2} };
-    std::array<float, 4> boiler_higher = std::array<float, 4> { {1, 15, 15, 15} };
-    std::array<float, 4> boiler_higher2 = std::array<float, 4> { {1, 50, 50, 50} };
+    std::array<float, 4> boiler_higher = std::array<float, 4> { {-5, 50, 50, 100} };
+    std::array<float, 4> boiler_higher2 = std::array<float, 4> { {1, 80, 80, 80} };
     std::array<float, 4> boiler_high = std::array<float, 4> { {100, 100, 100, 100} };
 
     std::array<float, 4> temp_error_low = std::array<float, 4> { {-5, -3, 3, 5} };
-    std::array<float, 4> temp_errorPos_medium  = std::array<float, 4> { {3, 10, 10, 20} };
-    std::array<float, 4> temp_errorNeg_medium  = std::array<float, 4> { {-20, -10, -10, -3} };
+    std::array<float, 4> temp_errorPos_medium  = std::array<float, 4> { {0, 10, 10, 20} };
+    std::array<float, 4> temp_errorNeg_medium  = std::array<float, 4> { {-20, -10, -10, -0} };
+    std::array<float, 4> temp_errorNeg_low  = std::array<float, 4> { {-10, -5, -5, -0} };
     std::array<float, 4> temp_error_high = std::array<float, 4> { {10, 300, 300, 300} };
 
     // Change per TEMPERATUR_DIFFERENCE_OVER_SEC seconds
     // During brewing we seem to get 1.6degree/sec drop per second
     // During heating we seem to get 1.8degree/sec increase per second
     std::array<float, 4> temp_change_slow = std::array<float, 4> { {-1.5, 0, 0, 1.5} };
-    std::array<float, 4> temp_changeDec_medium = std::array<float, 4> { {-3, -1.5, -1.5, -0.25} };
-    std::array<float, 4> temp_changeInc_medium = std::array<float, 4> { {0.25, 1.5, 1.5, 3} };
+    std::array<float, 4> temp_changeDec_medium = std::array<float, 4> { {10, 5, 5, 0} };
+    std::array<float, 4> temp_changeInc_medium = std::array<float, 4> { {0, 5, 5, 10} };
     std::array<float, 4> temp_change_fast = std::array<float, 4> { {1.5, 10, 10, 10} };
 };
 
-// TODO: need to be renamed to something like GaggiaBoilerController
 class GaggiaClassicController : public Boiler {
 private:
     GaggiaIO* m_gaggiaIO;

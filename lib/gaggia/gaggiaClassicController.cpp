@@ -62,6 +62,9 @@ void GaggiaClassicController::init() {
     FuzzySet* tempErrorPositiveHigh = fuzzyFromVector(m_config.temp_error_high, false);
     tempErrorInput->addFuzzySet(tempErrorPositiveHigh);
 
+    FuzzySet* tempErrorNegativeLow = fuzzyFromVector(m_config.temp_errorNeg_low, false);
+    tempErrorInput->addFuzzySet(tempErrorNegativeLow);
+
     // Input for temperature changes
     FuzzyInput* tempDrop = new FuzzyInput(TEMP_CHANGE_INPUT);
     m_fuzzy->addFuzzyInput(tempDrop);
@@ -95,26 +98,12 @@ void GaggiaClassicController::init() {
     joinSingle(rule++, tempErrorNegativeHigh, boilerHigh);
     joinSingle(rule++, tempErrorPositiveHigh, boilerLower);
 
-    // 32
-    joinSingleAND(rule++, tempErrorNegativeMedium, tempIncreasesFast, boilerHigher);
-    joinSingleAND(rule++, tempErrorNegativeMedium, tempIncreasedMedium, boilerHigher);
-    joinSingleAND(rule++, tempErrorNegativeMedium, tempChangesSlow, boilerHigher);
-    joinSingleAND(rule++, tempErrorNegativeMedium, tempDecreasesMedium, boilerHigher);
-    joinSingleAND(rule++, tempErrorNegativeMedium, tempDecreasesFast, boilerHigher2);
 
-    // 37
-    joinSingleAND(rule++, tempErrorLow, tempIncreasesFast, boilerLower);
-    joinSingleAND(rule++, tempErrorLow, tempIncreasedMedium, boilerLower);
-    joinSingleAND(rule++, tempErrorLow, tempChangesSlow, boilerSteady);
-    joinSingleAND(rule++, tempErrorLow, tempDecreasesMedium, boilerHigher);
-    joinSingleAND(rule++, tempErrorLow, tempDecreasesFast, boilerHigher2);
+    joinSingle(rule++, tempErrorNegativeMedium, boilerHigher);
+    joinSingle(rule++, tempErrorPositiveMedium, boilerLower);
 
-    // 42
-    joinSingleAND(rule++, tempErrorPositiveMedium, tempIncreasesFast, boilerLower);
-    joinSingleAND(rule++, tempErrorPositiveMedium, tempIncreasedMedium, boilerLower);
-    joinSingleAND(rule++, tempErrorPositiveMedium, tempChangesSlow, boilerLower);
-    joinSingleAND(rule++, tempErrorPositiveMedium, tempDecreasesMedium, boilerHigher);
-    joinSingleAND(rule++, tempErrorPositiveMedium, tempDecreasesFast, boilerHigher);
+    //    joinSingleAND(rule++, tempErrorNegativeLow, tempDecreasesMedium, boilerHigher);
+
 }
 
 
@@ -132,29 +121,34 @@ void GaggiaClassicController::handle(const uint32_t millis) {
 
     m_periodStartMillis = millis;
 
-    float requiredTemp;
+    std::rotate(m_tempStore.begin(), m_tempStore.begin() + m_tempStore.size() - 1, m_tempStore.end());
+
     if (m_brewMode) {
-        requiredTemp = m_gaggiaIO->brewTemperature()->get();
+        m_tempStore[0] = m_gaggiaIO->brewTemperature()->get();
+
+        // Feed temp error
+        m_fuzzy->setInput(TEMP_ERROR_INPUT, lastErrorInput());
+
+        // Temperature change input
+        m_fuzzy->setInput(TEMP_CHANGE_INPUT, tempChangeInput());
+
+        /////////////////////////////////////////////
+
+        // Run fuzzy rules
+        m_fuzzy->fuzzify();
+
+        //m_gaggiaIO->boilerIncrease(m_fuzzy->defuzzify(BOILER_OUTPUT));
+        m_gaggiaIO->boilerSet(m_fuzzy->defuzzify(BOILER_OUTPUT));
     } else {
-        requiredTemp = m_gaggiaIO->steamTemperature()->get();
+        m_tempStore[0] = m_gaggiaIO->steamTemperature()->get();
+
+        if (lastErrorInput() < 0.0f) {
+            m_gaggiaIO->boilerSet(100.0);
+        } else {
+            m_gaggiaIO->boilerSet(0.0);
+        }
     }
 
-    // rotate right and store on the first position the latest temperature
-    std::rotate(m_tempStore.begin(), m_tempStore.begin() + m_tempStore.size() - 1, m_tempStore.end());
-    m_tempStore[0] = requiredTemp;
-
-    // Feed temp error
-    m_fuzzy->setInput(TEMP_ERROR_INPUT, lastErrorInput());
-
-    // Temperature change input
-    m_fuzzy->setInput(TEMP_CHANGE_INPUT, tempChangeInput());
-
-    /////////////////////////////////////////////
-
-    // Run fuzzy rules
-    m_fuzzy->fuzzify();
-
-    m_gaggiaIO->boilerIncrease(m_fuzzy->defuzzify(BOILER_OUTPUT));
 }
 
 bool GaggiaClassicController::ruleFired(uint8_t i) {

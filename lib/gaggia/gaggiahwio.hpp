@@ -126,7 +126,7 @@ public:
     }
 
     virtual void boilerSet(float boiler) {
-        m_boilerSetValue = boiler;
+        m_boilerSetValue = between(boiler, 0.0f, 100.0f);
     }
 
     virtual Button* steamButton() const {
@@ -159,13 +159,14 @@ public:
             digitalWrite(m_valvePin, !valve());
 
             m_heatElement->handle(millis);
-            m_heatElement->increase(m_boilerIncreaseValue);
-            m_boilerIncreaseValue = 0.0;            
 
-            if (m_boilerSetValue>0) {
+            if (m_boilerSetValue >= 0.0f) {
                 m_heatElement->power(m_boilerSetValue);
-                m_boilerSetValue=-1.0f;
+                m_boilerSetValue = -1.0f;
             }
+
+            m_heatElement->increase(m_boilerIncreaseValue);
+            m_boilerIncreaseValue = 0.0;
 
             m_brewSensor->handle();
             m_steamSensor->handle();

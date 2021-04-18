@@ -1,7 +1,10 @@
 // How often we are updating the mqtt state in ms
 #include <cstdint>
-constexpr char MQTT_LASTWILL[]="lastwill";
-constexpr char MQTT_STATUS[]="status";
+
+constexpr uint32_t WDT_TIMEOUT = 1;
+
+constexpr char MQTT_LASTWILL[] = "lastwill";
+constexpr char MQTT_STATUS[] = "status";
 
 constexpr uint8_t STEAM_BUTTON_PIN = CONFIG_STEAM_BUTTON_PIN;   //  IN
 constexpr uint8_t BREW_BUTTON_PIN = CONFIG_BREW_BUTTON_PIN;     //  IN

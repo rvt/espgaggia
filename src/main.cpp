@@ -9,6 +9,7 @@
 #include <gaggiascriptcontext.hpp>
 #include "gaggiascripting.hpp"
 #include "network.hpp"
+#include <esp_task_wdt.h>
 extern "C" {
 #include <crc16.h>
 }
@@ -36,6 +37,7 @@ extern "C" {
 #include <Fuzzy.h>
 
 #include <gaggiaClassicController.hpp>
+#include <gaggiaClassicControllerPID.hpp>
 #include <boiler.hpp>
 #include <StreamUtils.h>
 #include <gaggiaio.hpp>
@@ -78,7 +80,7 @@ uint16_t lastMeasurementCRC = 0;
 uint32_t shouldRestart = 0;
 
 // I/O Sensors and devices
-std::unique_ptr<GaggiaClassicController> controller(nullptr);
+std::unique_ptr<Boiler> controller(nullptr);
 GaggiaHWIO gaggiaIO {
     PERI_PIN_SPI_CLK,
     PERI_PIN_SPI_MISO,
@@ -476,8 +478,19 @@ void setupNetworkCallback() {
 //  IOHardware
 ///////////////////////////////////////////////////////////////////////////
 void setupIOHardware() {
-    controller.reset(new GaggiaClassicController(&gaggiaIO));
-    controller->init();
+    const char* controllerType = (const char*)gaggiaConfig.get("controller");;
+
+    if (strcmp(controllerType, "PID")) {
+        auto gController = new GaggiaClassicControllerPID(&gaggiaIO);
+        controller.reset(gController);
+    } else {
+        auto gController = new GaggiaClassicController(&gaggiaIO);
+        controller.reset(gController);
+        gController->init();
+    }
+
+
+
     controller->setPoint(gaggiaConfig.get("defaultBrewTemp"));
     controller->brewMode(true);
 }
@@ -625,7 +638,7 @@ void setup_ui_events() {
         xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, (TickType_t) 1);
 
         const UIMessage_t changeViewMessage {UIMessage_e::CHANGE_VIEW, _LAST_ITEM_STUB, (uint32_t)0};
-        xQueueSend(xUIMessageQueue, (void*) &changeViewMessage, (TickType_t) 1); 
+        xQueueSend(xUIMessageQueue, (void*) &changeViewMessage, (TickType_t) 1);
 
     });
 }
@@ -698,6 +711,7 @@ void setDefaultConfigurations() {
     gaggiaConfigModified |= gaggiaConfig.putNotContains("defaultBrewTemp", PV(97.0f));
     gaggiaConfigModified |= gaggiaConfig.putNotContains("defaultSteamTemp", PV(145.0f));
     gaggiaConfigModified |= gaggiaConfig.putNotContains("powerSaveTemp", PV(50.0f));
+    gaggiaConfigModified |= gaggiaConfig.putNotContains("controller", PV("FUZZY"));
 }
 
 
@@ -711,8 +725,8 @@ void handleUIMessageQueue() {
     }
 
     // Ensure that we send with xUIMessageQueue and a ticktype of 1, when setting it to 0
-    // it seems that xQueueReceive was blocking 
-    while (xQueueReceive(xUIMessageQueue, &(uiMessage_t), ( TickType_t ) 1) == pdPASS) {
+    // it seems that xQueueReceive was blocking
+    while (xQueueReceive(xUIMessageQueue, &(uiMessage_t), (TickType_t) 1) == pdPASS) {
         //Serial.print ((uint8_t)uiMessage_t.type);
         switch (uiMessage_t.type) {
             case UIMessage_e::CHANGE_VIEW:
@@ -728,7 +742,7 @@ void handleUIMessageQueue() {
                 break;
 
             case UIMessage_e::SET_TEXT_STATIC:
-                char *buffer = gaggia_ui_set_text_buffer(uiMessage_t.element);
+                char* buffer = gaggia_ui_set_text_buffer(uiMessage_t.element);
                 strcpy(buffer, uiMessage_t.charValue);
                 gaggia_ui_set_text(uiMessage_t.element, nullptr);
                 break;
@@ -738,16 +752,17 @@ void handleUIMessageQueue() {
 
 void _displayTask() {
     handleUIMessageQueue();
-    uint32_t sta = millis(); 
+    //uint32_t sta = millis();
     display_loop();
-    uint32_t t = millis() - sta;
-    if (t>100) {
-            Serial.println (millis() - sta);
-    }
+    //uint32_t t = millis() - sta;
+
+    //if (t > 100) {
+    //    Serial.println(millis() - sta);
+    //}
 }
 
 void displayTask(void* pvParameters) {
-    while (true) {    
+    while (true) {
         _displayTask();
     }
 }
@@ -836,7 +851,9 @@ void loop() {
             powerDownMonitor.handle(currentMillis);
             uiUpdateTimer.handle(currentMillis);
         } else if (counter50TimesSec % maxSlots == slot50++) {
-            //wifiManager.process();
+            esp_task_wdt_reset();
+        } else if (counter50TimesSec % maxSlots == slot50++) {
+            wifiManager.process();
         } else if (counter50TimesSec % maxSlots == slot50++) {
             if (shouldRestart != 0 && (currentMillis - shouldRestart >= 5000)) {
                 shouldRestart = 0;
@@ -917,6 +934,10 @@ void setup() {
         NULL,
         0);         /* Core ID */
 #endif
+
+    esp_task_wdt_init(WDT_TIMEOUT, true);
+    esp_task_wdt_add(NULL);
+
     tick10Millis = millis();
     tick50Millis = millis();
 }

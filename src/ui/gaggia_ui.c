@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+
+const float SELECT_MAX_ROWS = 3.0f;
 /**********************
  *  STATIC VARIABLES
  **********************/
@@ -216,18 +218,14 @@ static lv_obj_t* spin_create(lv_obj_t* parent,
     *plusButton = plusBtn;
     return box;
 }
-#if defined (BUILD_NATIVE)
-const char* map[] = {"Cappuccino", "A. Coffee", "\n", "Purge Cold", "Purge Hot", ""};
-#endif
 
 lv_obj_t* gaggia_brew_options(lv_obj_t* parent) {
     // Matrix to select it
     lv_obj_t* btnm1 = lv_btnmatrix_create(parent, NULL);
     lv_obj_set_width_fit(btnm1, lv_obj_get_width(parent));
+    lv_obj_set_height_fit(btnm1, lv_obj_get_height(parent));
     lv_obj_add_style(btnm1, LV_LABEL_PART_MAIN, &style_box_opa00);
-#if defined (BUILD_NATIVE)
-    lv_btnmatrix_set_map(btnm1, map);
-#endif
+
     lv_obj_align(btnm1, parent, LV_ALIGN_CENTER, 0, OFFSET);
 
     return btnm1;
@@ -361,7 +359,7 @@ void gaggia_ui_create_ui(void) {
     // lv_coord_t vres = lv_disp_get_ver_res(NULL);
 
     // Background
-   lv_obj_t* wp = lv_img_create(lv_scr_act(), NULL);
+    lv_obj_t* wp = lv_img_create(lv_scr_act(), NULL);
     lv_obj_set_width(wp, hres);
     lv_img_set_src(wp, &coffee);
 
@@ -503,6 +501,18 @@ int32_t gaggia_ui_spin_get_value(enum ui_element_types label) {
 }
 
 void gaggia_ui_btn_map(enum ui_element_types label,  const char* map[]) {
+    uint8_t rows = 1;
+
+    uint8_t entry = 0;
+
+    // Calculate the number of rows in the menu so we can resize the buttons properly
+    while (strlen(map[entry++]) != 0) {
+        if (strcmp(map[entry], "\n") == 0) {
+            rows++;
+        }
+    }
+
+    lv_obj_set_height_fit(ui_elements[label].element, lv_obj_get_height(lv_obj_get_parent(ui_elements[label].element)) * ((float)rows / SELECT_MAX_ROWS));
     lv_btnmatrix_set_map(ui_elements[label].element, map);
 }
 

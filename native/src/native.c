@@ -21,6 +21,9 @@ int main(void) {
 
     gaggia_ui_create_ui();
 
+    static const char* map[] = {"Cappuccino", "A. Coffee", "\n", "Purge Cold", "Purge Hot", ""};
+    gaggia_ui_btn_map(PROCESS_SELECT_MATRIX, map);
+
     hal_loop();
 }
 

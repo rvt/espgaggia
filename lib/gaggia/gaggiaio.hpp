@@ -20,6 +20,7 @@ public:
     virtual TemperatureSensor* steamTemperature() const = 0;
 
     virtual void boilerIncrease(float boiler) = 0;
+    virtual void boilerSet(float boiler) = 0;
     virtual HeatElement* heatElement() const = 0;
 
     virtual void handle(unsigned long millis)  = 0;

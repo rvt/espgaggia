@@ -4,7 +4,7 @@
 #include "network.hpp"
 #include <statemachine.hpp>
 #include <propertyutils.hpp>
-
+#include <esp_task_wdt.h>
 #include <PubSubClient.h>
 
 #if defined(ESP32)
@@ -53,10 +53,13 @@ void startOTA() {
     // Start OTA
     ArduinoOTA.setHostname(controllerConfig.get("mqttClientID"));
     ArduinoOTA.onStart([]() {
+        esp_task_wdt_delete(nullptr);
+
         if (otaCallback != nullptr) {
             otaCallback();
         }
     });
+
     ArduinoOTA.onError([](ota_error_t error) {
         Serial.print("ArduinoOTA Error[");
         Serial.print(error);
