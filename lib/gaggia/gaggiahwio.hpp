@@ -21,6 +21,7 @@ class GaggiaHWIO : public GaggiaIO {
 
     bool m_pump;
     bool m_valve;
+    bool m_stop;
     float m_boilerIncreaseValue;
     float m_boilerSetValue;
     unsigned long m_startMilis;
@@ -77,8 +78,8 @@ public:
             return uiBrewButton;
         } };
 #else
-        m_steamButton = new HWButton {STEAM_BUTTON_PIN, true, 110};
-        m_brewButton  = new HWButton{BREW_BUTTON_PIN, true, 110};
+        m_steamButton = new HWButton {STEAM_BUTTON_PIN, true, 300};
+        m_brewButton  = new HWButton{BREW_BUTTON_PIN, true, 300};
 #endif
 
     }
@@ -148,13 +149,20 @@ public:
         return m_heatElement;
     }
 
+    virtual bool stop() const {
+        return m_stop;
+    }
+
+    virtual void resetStop() {
+        m_stop = false;
+    }
+
     void handle(unsigned long millis) {
         constexpr int period = 1000 / 50;
 
         if (millis - m_startMilis >= period) {
             m_startMilis += period;
 
-            // These must be called resonable often, at least 50 times a second
             digitalWrite(m_pumpPin, !pump());
             digitalWrite(m_valvePin, !valve());
 
@@ -173,6 +181,8 @@ public:
 
             m_steamButton->handle();
             m_brewButton->handle();
+
+            m_stop = m_stop || m_brewButton->isEdgeDown() || m_steamButton->isEdgeDown();
         }
 
 

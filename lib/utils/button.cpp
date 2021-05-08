@@ -23,8 +23,8 @@ extern "C" uint32_t digitalRead(uint8_t);
 #define DIGITAL_KNOB_IS_EDGE_DOWN 5
 
 //Hysteresis to detect low/high states for debounce
-#define DIGITAL_KNOB_HIGH 175
-#define DIGITAL_KNOB_LOW 125
+#define DIGITAL_KNOB_HIGH 225
+#define DIGITAL_KNOB_LOW 25
 
 // Bitmasks for detething the type of press based on the type of press 32 or 64 bit
 #define DIGITAL_KNOB_SINGLE_CLICK_AMASK 0b00000111111111111000000000000000

@@ -270,7 +270,12 @@ bool saveConfig(const char* filename, Properties& properties) {
 ///////////////////////////////////////////////////////////////////////////
 //  Automation
 ///////////////////////////////////////////////////////////////////////////
-
+void stopCurrentScript() {
+    xQueueReset(xMainMessageQueue);
+    MainMessage_t loadScriptMessage {MainMessage_e::LOAD_SCRIPT};
+    loadScriptMessage.copyChar(STOP_SCRIPT);
+    xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, pdMS_TO_TICKS(1));
+}
 
 void handleScriptContext() {
 
@@ -309,6 +314,9 @@ void handleScriptContext() {
             gaggia_scripting_load(STARTUP_SCRIPT);
             break;
 
+        case 2:
+            gaggiaIO.resetStop();
+
         case 1:
             gaggiaIO.pump(gaggia_scripting_context()->m_pump);
             gaggiaIO.valve(gaggia_scripting_context()->m_valve);
@@ -321,6 +329,16 @@ void handleScriptContext() {
     uiBrewButton = gaggiaIO.brewButton()->current();
     uiSteamButton = gaggiaIO.steamButton()->current();
 #endif
+
+    if (gaggia_scripting_context()!=nullptr) {
+        if (gaggia_scripting_context()->m_monitorButtonStop) {
+            if (gaggiaIO.stop()) {
+                stopCurrentScript();
+            }
+        } else {
+            gaggiaIO.resetStop();
+        }
+    }
 }
 
 
@@ -608,10 +626,7 @@ void setup_ui_events() {
 
     // Events
     gaggia_ui_add_event_cb(STOP_BUTTON, [](enum ui_element_types label, enum ui_event event) {
-        xQueueReset(xMainMessageQueue);
-        MainMessage_t loadScriptMessage {MainMessage_e::LOAD_SCRIPT};
-        loadScriptMessage.copyChar(STOP_SCRIPT);
-        xQueueSend(xMainMessageQueue, (void*) &loadScriptMessage, pdMS_TO_TICKS(1));
+        stopCurrentScript();
     });
 
     gaggia_ui_add_event_cb(GENERIC_UI_INTERACTION, [](enum ui_element_types label, enum ui_event event) {
@@ -762,7 +777,9 @@ void _displayTask() {
 }
 
 void displayTask(void* pvParameters) {
+    esp_task_wdt_add(NULL);
     while (true) {
+        esp_task_wdt_reset();
         _displayTask();
     }
 }
@@ -868,7 +885,7 @@ void loop() {
     gaggiaIO.handle(currentMillis);
 
     if (currentMillis - tick10Millis >= TICK10MS_PERIOD) {
-        tick10Millis = currentMillis;
+        tick10Millis += TICK10MS_PERIOD;
         handleScriptContext();
     }
 

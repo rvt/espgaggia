@@ -1,5 +1,6 @@
 pump=0;
 valve=0;
+autoStop=0;
 BrewOrSteamButton=1,isOn,isOn,1;
 jump=isOff;
 label=isOn;

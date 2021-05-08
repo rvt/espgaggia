@@ -3,7 +3,6 @@
 #include "gaggiascripting.hpp"
 #include <scriptrunner.hpp>
 #include <gaggiascriptcontext.hpp>
-#include <gaggiahwio.hpp>
 #include "ui/gaggia_ui.h"
 #include "message.hpp"
 
@@ -172,6 +171,12 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
     }
                                                         });
 
+    commands.push_back(new Command<GaggiaScriptContext> {"autoStop", [&](const char* value, GaggiaScriptContext & context) {
+        context.m_monitorButtonStop = getBoolValue(value, 0);
+        return true;
+    }
+                                                        });
+
     commands.push_back(new Command<GaggiaScriptContext> {"SteamButton", [](const char* value, GaggiaScriptContext & context) {
         if (context.m_steamButton == getBoolValue(value, 0)) {
             return true;
@@ -212,19 +217,15 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
 
         bool buttonValue = getBoolValue(value, 0);
 
-        if (context.m_brewButton == buttonValue &&
-            context.m_steamButton == buttonValue) {
-            return true;
-        }
-
-        return false;
+        return context.m_brewButton == buttonValue && context.m_steamButton == buttonValue;
     }
                                                         });
     scriptRunner = new ScriptRunner<GaggiaScriptContext> {commands};
 }
 
 uint8_t gaggia_load_script() {
-    char buffer[1024];
+    char buffer[MAX_SCRIPT_SIZE+1];
+    uint8_t returnValue=0;
 
     if (strlen(scriptContextFileToLoad) != 0) {
         if (FileSystemFSBegin()) {
@@ -255,22 +256,22 @@ uint8_t gaggia_load_script() {
                     }
 
                     delete oldContext;
-                    strcpy(scriptContextFileToLoad, "");
                     Serial.println(F(" loaded."));
-                    return 2;
+                    returnValue=2;
                 } else {
                     Serial.println(F(" failed."));
-                    return 1;
+                    returnValue=1;
                 }
             } else {
-                Serial.println(F(" not found."));
-                strcpy(scriptContextFileToLoad, "");
-                return 1;
+                returnValue=1;
             }
         }
     }
 
-    return 0;
+    if (returnValue!=0) {
+        strcpy(scriptContextFileToLoad, "");
+    }
+    return returnValue;
 }
 
 void gaggia_scripting_load(const char* value) {
@@ -281,10 +282,10 @@ int8_t gaggia_scripting_handle() {
     switch (gaggia_load_script()) {
         // when we just loaded a script, we do need to set the context values first, so we return and let the next run handle that
         case 2:
-            return 1;
+            return 2;
 
+        // When returned 1 we failed to load or no script was find, so we signal script has ended
         case 1:
-            // When returned 1 we failed to load or no script was find, so we singled script has ended
             return 0;
     }
 
@@ -292,7 +293,7 @@ int8_t gaggia_scripting_handle() {
         return -1;
     }
 
-    return scriptRunner->handle(*scriptContext, true);
+    return scriptRunner->handle(*scriptContext, true)?1:0;
 }
 
 GaggiaScriptContext* gaggia_scripting_context() {

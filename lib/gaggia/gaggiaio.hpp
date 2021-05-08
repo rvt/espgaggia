@@ -24,4 +24,7 @@ public:
     virtual HeatElement* heatElement() const = 0;
 
     virtual void handle(unsigned long millis)  = 0;
+
+    virtual bool stop() const = 0;
+    virtual void resetStop();
 };

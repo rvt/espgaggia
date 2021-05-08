@@ -15,6 +15,7 @@ public:
     bool m_pump;
     bool m_brewMode;
     float m_setPoint;
+    bool m_monitorButtonStop;
     // Read
     float m_brewTemperature;
     float m_steamTemperature;
@@ -29,6 +30,7 @@ public:
         m_pump(false),
         m_brewMode(true),
         m_setPoint(15.0f),
+        m_monitorButtonStop(true),
         m_brewTemperature(15.0f),
         m_steamTemperature(15.0f),
         m_brewButton(false),
@@ -45,6 +47,7 @@ public:
         m_pump(copy->m_pump),
         m_brewMode(copy->m_brewMode),
         m_setPoint(copy->m_setPoint),
+        m_monitorButtonStop(true),
         m_brewTemperature(copy->m_brewTemperature),
         m_steamTemperature(copy->m_steamTemperature),
         m_brewButton(copy->m_brewButton),
