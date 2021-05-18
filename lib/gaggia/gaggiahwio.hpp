@@ -78,8 +78,8 @@ public:
             return uiBrewButton;
         } };
 #else
-        m_steamButton = new HWButton {STEAM_BUTTON_PIN, true, 300};
-        m_brewButton  = new HWButton{BREW_BUTTON_PIN, true, 300};
+        m_steamButton = new HWButton {STEAM_BUTTON_PIN, true, 150};
+        m_brewButton  = new HWButton{BREW_BUTTON_PIN, true, 150};
 #endif
 
     }

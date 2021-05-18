@@ -70,9 +70,9 @@ float getFloatValue(const char* value, uint8_t pos) {
             const char* parsedValue = (char*)parsed;
 
             if (gaggiaConfig.contains(parsedValue)) {
-                rValue = between((float)gaggiaConfig.get(parsedValue), 0.0f, 160.0f);
+                rValue = between((float)gaggiaConfig.get(parsedValue), -160.0f, 160.0f);
             } else {
-                rValue = between((float)parsed, 0.0f, 200.0f);
+                rValue = between((float)parsed, -160.0f, 160.0f);
             }
         }
     });
@@ -101,6 +101,12 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
 
     commands.push_back(new Command<GaggiaScriptContext> {"setTemp", [](const char* value, GaggiaScriptContext & context) {
         context.m_setPoint = getFloatValue(value, 0);
+        return true;
+    }
+                                                        });
+
+    commands.push_back(new Command<GaggiaScriptContext> {"incTemp", [](const char* value, GaggiaScriptContext & context) {
+        context.m_setPoint = context.m_setPoint + getFloatValue(value, 0);
         return true;
     }
                                                         });
@@ -171,6 +177,23 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
     }
                                                         });
 
+    commands.push_back(new Command<GaggiaScriptContext> {"count", [](const char* value, GaggiaScriptContext & context) {
+
+        if (context.m_counter == 0) {
+            context.m_counter = between(getFloatValue(value, 0), 1.0f, 32000.0f);
+        } else {
+            context.m_counter--;
+            if (context.m_counter == 0) {
+                return true;                
+            }
+        }
+        if (JumpOrStay(context, value, 1) == false) {
+            context.m_counter = 0;
+        }
+        return true;
+    }
+                                                        });
+          
     commands.push_back(new Command<GaggiaScriptContext> {"autoStop", [&](const char* value, GaggiaScriptContext & context) {
         context.m_monitorButtonStop = getBoolValue(value, 0);
         return true;

@@ -1,8 +1,8 @@
-Message=Stopping,;
+Message=Stopping;
 pump=0;
 valve=0;
 brewMode=1;
-setTemp=85;
+setTemp=standByTemp;
 wait=2500;
 MessageOff=1;
 load=/_quickStart.txt;

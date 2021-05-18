@@ -498,7 +498,7 @@ void setupNetworkCallback() {
 void setupIOHardware() {
     const char* controllerType = (const char*)gaggiaConfig.get("controller");;
 
-    if (strcmp(controllerType, "PID")) {
+    if (strcmp(controllerType, "PID") == 0) {
         auto gController = new GaggiaClassicControllerPID(&gaggiaIO);
         controller.reset(gController);
     } else {
@@ -726,6 +726,7 @@ void setDefaultConfigurations() {
     gaggiaConfigModified |= gaggiaConfig.putNotContains("defaultBrewTemp", PV(97.0f));
     gaggiaConfigModified |= gaggiaConfig.putNotContains("defaultSteamTemp", PV(145.0f));
     gaggiaConfigModified |= gaggiaConfig.putNotContains("powerSaveTemp", PV(50.0f));
+    gaggiaConfigModified |= gaggiaConfig.putNotContains("standByTemp", PV(95.0f));
     gaggiaConfigModified |= gaggiaConfig.putNotContains("controller", PV("FUZZY"));
 }
 

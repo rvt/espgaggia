@@ -2,5 +2,5 @@ MessageOff=1;
 pump=0;
 valve=0;
 brewMode=1;
-setTemp=85;
+setTemp=standByTemp;
 load=/_quickStart.txt;

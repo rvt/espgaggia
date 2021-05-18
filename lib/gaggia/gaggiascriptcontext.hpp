@@ -21,7 +21,8 @@ public:
     float m_steamTemperature;
     bool m_brewButton;
     bool m_steamButton;
-
+    // Internal
+    uint16_t m_counter;
     GaggiaScriptContext(
         const char* script
     ) :
@@ -34,7 +35,8 @@ public:
         m_brewTemperature(15.0f),
         m_steamTemperature(15.0f),
         m_brewButton(false),
-        m_steamButton(false) {
+        m_steamButton(false),
+        m_counter(0) {
 
     }
 
@@ -51,6 +53,7 @@ public:
         m_brewTemperature(copy->m_brewTemperature),
         m_steamTemperature(copy->m_steamTemperature),
         m_brewButton(copy->m_brewButton),
-        m_steamButton(copy->m_steamButton) {
+        m_steamButton(copy->m_steamButton),
+        m_counter(0) {
     }
 };

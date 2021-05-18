@@ -81,6 +81,8 @@ Well, it's not really scripting because the scripting capabilities are very limi
 | brewTemp | float or valueRef | 0..160 or string | Set a desired temperature and enable brewMode, wait untill reached or above      | `brewTemp=95;`<br>`brewTemp=fromConfig;` | Set the brew temperature to 95 degrees. Or read the desired temperature from the `fromConfig` value in `gaggiaCfg.conf` |
 | steamTemp | float or valueRef | 0..160 or string | Setup the controller to read steam sensor temperature. Otherwise read temperature from steam sensor | `steamTemp=150;` | |
 | setTemp | float or valueRef | 0..160 or string | Set a desired temperature, similar to brewTemp but do not wait | `setTemp=95;`<br>`setTemp=fromConfig;` | |
+| incTemp | float or valueRef | -160..160 | Increase or decrease from current temperature | `incTemp=-5;`<br>`incTemp=fromConfig;` | |
+| count | int or valueRef | 1..32000 | Loop a number of times (minimal 1 time) | `count=5,do5Times;` | |
 | Message | String,String | | Shows a message box on the first screen | `Message=Message,Title;` | Display a message 'message' with title 'Title' |
 | MessageOff | ignored | | Hide the message box | `MessageOff=1;` | Hode the message box | 
 | load | String | any valid script filename | Load a new script | `load=/foo.txt;` | Load a new script with filename foo.txt, / is mandatory | 

@@ -15,5 +15,5 @@ steamTemp=defaultSteamTemp;
 autoStop=0;
 Message=Steam is ready;
 SteamButton=0;
-setTemp=85; 
+setTemp=standByTemp; 
 load=/purgecold.txt;
