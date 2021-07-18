@@ -11,7 +11,8 @@ enum class MainMessage_e {
     POWERSAVE_RESTART,
     SET_DEFAULTBREWTEMPERATURE,
     SET_DEFAULTSTEAMTEMPERATURE,
-    LOAD_SCRIPT
+    LOAD_SCRIPT,
+    AUTO_REMOVE_MESSAGE_DIALOG,
 };
 
 enum class UIMessage_e {
@@ -19,7 +20,7 @@ enum class UIMessage_e {
     CHANGE_VIEW,
     SET_VISIBILITY,
     SET_TEXT,
-    SET_TEXT_STATIC // Use this if you are sure that the text you are placing fits in the existing buffer
+    SET_TEXT_STATIC, // Use this if you are sure that the text you are placing fits in the existing buffer
 };
 
 template <typename P1, typename P2>

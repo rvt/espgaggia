@@ -16,6 +16,7 @@
  *********************/
 extern Properties gaggiaConfig;
 extern QueueHandle_t xUIMessageQueue;
+extern QueueHandle_t xMainMessageQueue;
 
 /*********************
  *      Variables
@@ -32,7 +33,9 @@ constexpr uint8_t SCRIPT_LINE_SIZE_MAX = 64;
  *      Typedef
  *********************/
 typedef UIQueue_message<UIMessage_e, 32> UIMessage_t;
-typedef DataPair<ui_element_types, bool> UIVisibility_t;
+typedef MainQueue_message<MainMessage_e, 16> MainMessage_t;
+
+//typedef DataPair<ui_element_types, bool> UIVisibility_t;
 
 using namespace rvt::scriptrunner;
 
@@ -68,15 +71,18 @@ float getFloatValue(const char* value, uint8_t pos) {
     OptParser::get<SCRIPT_LINE_SIZE_MAX>(value, ',', [&](const OptValue & parsed) {
         if (parsed.pos() == pos) {
             const char* parsedValue = (char*)parsed;
-
             if (gaggiaConfig.contains(parsedValue)) {
-                rValue = between((float)gaggiaConfig.get(parsedValue), -160.0f, 160.0f);
+                rValue = (float)gaggiaConfig.get(parsedValue);
             } else {
-                rValue = between((float)parsed, -160.0f, 160.0f);
+                rValue = (float)parsed;
             }
         }
     });
     return rValue;
+}
+
+float getTemperatureValue(const char* value, uint8_t pos) {
+    return between(getFloatValue(value, pos), -160.0f, 160.0f);
 }
 
 void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
@@ -100,20 +106,20 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
                                                         });
 
     commands.push_back(new Command<GaggiaScriptContext> {"setTemp", [](const char* value, GaggiaScriptContext & context) {
-        context.m_setPoint = getFloatValue(value, 0);
+        context.m_setPoint = getTemperatureValue(value, 0);
         return true;
     }
                                                         });
 
     commands.push_back(new Command<GaggiaScriptContext> {"incTemp", [](const char* value, GaggiaScriptContext & context) {
-        context.m_setPoint = context.m_setPoint + getFloatValue(value, 0);
+        context.m_setPoint = context.m_setPoint + getTemperatureValue(value, 0);
         return true;
     }
                                                         });
 
     commands.push_back(new Command<GaggiaScriptContext> {"brewTemp", [](const char* value, GaggiaScriptContext & context) {
         context.m_brewMode = true;
-        context.m_setPoint = getFloatValue(value, 0);
+        context.m_setPoint = getTemperatureValue(value, 0);
 
 #if defined (DONT_WAIT_FOR_TEMPS)
         return true;
@@ -124,7 +130,7 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
                                                         });
     commands.push_back(new Command<GaggiaScriptContext> {"steamTemp", [](const char* value, GaggiaScriptContext & context) {
         context.m_brewMode = false;
-        context.m_setPoint = getFloatValue(value, 0);
+        context.m_setPoint = getTemperatureValue(value, 0);
 
 #if defined (DONT_WAIT_FOR_TEMPS)
         return true;
@@ -163,8 +169,15 @@ void gaggia_scripting_init(GaggiaIO* gaggiaIO) {
         Serial.print("Message Off : ");
         Serial.println(value);
 
-        UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, PROCESS_MESSAGE_CONTAINER, (bool)false};
-        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 1);
+        bool immediately = getBoolValue(value, 0);
+
+        if ( immediately == true ) {            
+            UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, PROCESS_MESSAGE_CONTAINER, (bool)false};
+            xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 1);
+        } else {
+            MainMessage_t autoRemoveMessage {MainMessage_e::AUTO_REMOVE_MESSAGE_DIALOG};
+            xQueueSend(xMainMessageQueue, (void*) &autoRemoveMessage, (TickType_t) 1);
+        }
         return true;
     }
                                                         });

@@ -146,7 +146,7 @@ OneShot saveHardwareConfigHandler{
     }
 };
 
-OneShot removeCounterLabel{
+OneShot removeCounterLabel {
     5000,
     []() {
         UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, TIMER_BOX, (bool)true};
@@ -167,6 +167,20 @@ OneShot removeCounterLabel{
         }
 
         return gaggiaIO.pump();
+    }
+};
+
+// One shot timer to automatically remove the message after 5000 ms
+OneShot removeMessageDialog {
+    5000,
+    []() {
+    },
+    []() {
+        UIMessage_t setVisibilityMessage {UIMessage_e::SET_VISIBILITY, PROCESS_MESSAGE_CONTAINER, (bool)false};
+        xQueueSend(xUIMessageQueue, (void*) &setVisibilityMessage, (TickType_t) 1);
+    },
+    []() {
+        return false;
     }
 };
 
@@ -745,6 +759,9 @@ void handleUIMessageQueue() {
     while (xQueueReceive(xUIMessageQueue, &(uiMessage_t), (TickType_t) 1) == pdPASS) {
         //Serial.print ((uint8_t)uiMessage_t.type);
         switch (uiMessage_t.type) {
+            case UIMessage_e::NOOP:
+                break;
+
             case UIMessage_e::CHANGE_VIEW:
                 gaggia_ui_change_screen(uiMessage_t.intValue);
                 break;
@@ -762,6 +779,7 @@ void handleUIMessageQueue() {
                 strcpy(buffer, uiMessage_t.charValue);
                 gaggia_ui_set_text(uiMessage_t.element, nullptr);
                 break;
+
         }
     }
 }
@@ -796,6 +814,9 @@ void handleMainMessageQueue() {
 
     if (xQueueReceive(xMainMessageQueue, &(mainMessage_t), (TickType_t) 1) == pdPASS) {
         switch (mainMessage_t.type) {
+            case MainMessage_e::NOOP:
+                break;
+
             case MainMessage_e::POWERSAVE_RESTART:
                 powerSaveMonitor.start();
                 powerSaveMonitor.trigger();
@@ -815,6 +836,11 @@ void handleMainMessageQueue() {
 
             case MainMessage_e::LOAD_SCRIPT:
                 gaggia_scripting_load(mainMessage_t.charValue);
+                break;
+
+            case MainMessage_e::AUTO_REMOVE_MESSAGE_DIALOG:
+                removeMessageDialog.start();
+                removeMessageDialog.trigger();
                 break;
 
             default:
@@ -867,6 +893,7 @@ void loop() {
         } else if (counter50TimesSec % maxSlots == slot50++) {
             powerSaveMonitor.handle(currentMillis);
             powerDownMonitor.handle(currentMillis);
+            removeMessageDialog.handle(currentMillis);
             uiUpdateTimer.handle(currentMillis);
         } else if (counter50TimesSec % maxSlots == slot50++) {
             esp_task_wdt_reset();
@@ -905,7 +932,6 @@ void setup() {
     Serial.begin(115200);
     // Wait until Serial comes available
     uint8_t counter = 0;
-
     while (!Serial && counter < 10) {
         delay(5 * counter++);
     }

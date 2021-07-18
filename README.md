@@ -84,7 +84,7 @@ Well, it's not really scripting because the scripting capabilities are very limi
 | incTemp | float or valueRef | -160..160 | Increase or decrease from current temperature | `incTemp=-5;`<br>`incTemp=fromConfig;` | |
 | count | int or valueRef | 1..32000 | Loop a number of times (minimal 1 time) | `count=5,do5Times;` | |
 | Message | String,String | | Shows a message box on the first screen | `Message=Message,Title;` | Display a message 'message' with title 'Title' |
-| MessageOff | ignored | | Hide the message box | `MessageOff=1;` | Hode the message box | 
+| MessageOff | int | 0 or 1 | When 1 immediatly hdoe the message box. When 0 wait 5 seconds untill it's hidden | `MessageOff=0;` | Hide the message box after 5 seconds. | 
 | load | String | any valid script filename | Load a new script | `load=/foo.txt;` | Load a new script with filename foo.txt, / is mandatory | 
 | SteamButton | bool | 1 or 0 | Wait for the steam button to have a specific value | `SteamButton=1;` | Wait untill the steam button is pressed |
 | BrewButton | bool | 1 or 0 | Wait for the brew button to have a specific value | `BrewButton=0;` | Wait untill the brew button is released |
@@ -168,6 +168,7 @@ Note: For latest component set check the KiCAD schematic.
 * 2x MAX31855K K Type Thermokoppel Breakout Board  https://nl.aliexpress.com/item/4000030496237.html?spm=a2g0o.cart.0.0.26e83c00vfImW6&mp=1
 * Assorted silicon wires that can handle the current, like XXAWG for the heat element (for 230V Gaggia), the rest can be XXAWG 
 * HLK-PM01 230 -> 5VDC power supply https://nl.aliexpress.com/item/32408565688.html?spm=a2g0s.9042311.0.0.13984c4dg0pb5v
+* 1x ferrit ring to be put at the 220V lines before the HLK-PM01
 
 note: For the MAX31855K make sure you get the 'fancy' one, that is proper dialectric consensator, NOT the one with just two components
 
@@ -175,7 +176,7 @@ note: For the MAX31855K make sure you get the 'fancy' one, that is proper dialec
 
 For pins in `platformio.ini`
 
-_WARNING schematic needs further verification_
+_WARNING schematic needs further verification_ It's now verified and work's well after 6 months.
 See KIA Print for latest version.
 
 ![images](images/schematic_new.jpg "Schematic")
@@ -190,11 +191,12 @@ See KIA Print for latest version.
 - [x] Temperature control
 - [x] Scripting
 - [x] Power save and powerdown
+- [x] Update values over MQTT
 
 
 # Homebridge
 
-JSON COnfiguration for homebrige so you can turn on and off the machine with SIRI.
+JSON Configuration for homebrige so you can turn on and off the machine with SIRI.
 `ID OF ESP32` is in the form of `XXXXXXXX`. Use a tool like http://mqtt-explorer.com to see the messages
 
 ```json
